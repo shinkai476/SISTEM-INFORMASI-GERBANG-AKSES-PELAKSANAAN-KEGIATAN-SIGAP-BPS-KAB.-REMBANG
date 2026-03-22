@@ -1,0 +1,163 @@
+<div class="page-container">
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animated-item">
+        
+        <div class="stat-card-modern">
+            <div>
+                <div class="label">Total Tim Kerja</div>
+                <div class="value" id="home-stat-tim">0</div>
+                <div class="trend up">
+                    <i class="fas fa-users mr-1"></i> Tim Aktif
+                </div>
+            </div>
+            <div class="stat-icon-box bg-blue-100 text-blue-600">
+                <i class="fas fa-sitemap"></i>
+            </div>
+        </div>
+
+        <div class="stat-card-modern">
+            <div>
+                <div class="label">Total Kegiatan</div>
+                <div class="value" id="home-stat-activity">0</div>
+                <div class="trend up">
+                    <i class="fas fa-chart-line mr-1"></i> Terdata
+                </div>
+            </div>
+            <div class="stat-icon-box bg-green-100 text-green-600">
+                <i class="fas fa-clipboard-list"></i>
+            </div>
+        </div>
+
+        <div class="stat-card-modern">
+            <div>
+                <div class="label">Risiko Terpantau</div>
+                <div class="value" id="home-stat-risk">-</div>
+                <div class="trend down">
+                    <i class="fas fa-shield-alt mr-1"></i> Mitigasi
+                </div>
+            </div>
+            <div class="stat-icon-box bg-red-100 text-red-600">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+        </div>
+
+        <div class="stat-card-modern">
+            <div>
+                <div class="label">Status Sistem</div>
+                <div class="value text-lg mt-1 text-green-600">Online</div>
+                <div class="trend text-gray-500">
+                    <i class="fas fa-server mr-1"></i> Stabil
+                </div>
+            </div>
+            <div class="stat-icon-box bg-purple-100 text-purple-600">
+                <i class="fas fa-check-circle"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+        
+        <div class="lg:col-span-2 animated-item" style="--animation-delay: 100ms;">
+            <div class="welcome-banner">
+                <h2 class="welcome-title">
+                    <i class="fas fa-laptop-code"></i> 
+                    SISTEM INFORMASI GERBANG AKSES PELAKSANAAN KEGIATAN (SIGAP)
+                    BPS KAB. REMBANG
+                </h2>
+                <p class="welcome-subtitle">
+                    Selamat Datang Tim BPS Kabupaten Rembang. Platform terintegrasi sebagai gerbang akses informasi pelaksanaan kegiatan BPS Kabupaten Rembang, mendukung pengelolaan tim, pemantauan anggaran, serta identifikasi dan mitigasi risiko berbasis data.
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                    
+                    <div class="visi-misi-box">
+                        <div class="visi-misi-heading">
+                            <i class="fas fa-binoculars mr-2"></i> Visi
+                        </div>
+                        <p class="visi-text">
+                            "Penyedia Data Statistik Berkualitas untuk Indonesia Maju"
+                        </p>
+                    </div>
+                    
+                    <div class="visi-misi-box">
+                        <div class="visi-misi-heading">
+                            <i class="fas fa-tasks mr-2"></i> Misi
+                        </div>
+                        <ul class="misi-list">
+                            <li>Menyediakan statistik berkualitas.</li>
+                            <li>Mewujudkan Sistem Statistik Nasional.</li>
+                            <li>Pelayanan prima statistik.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="mt-8 flex gap-3">
+                    <button id="home-cta-btn" onclick="$('.nav-link[data-page=\'Dashboard\']').click();" class="bg-white/20 hover:bg-white/30 text-white font-semibold py-2 px-4 rounded-lg backdrop-blur-sm transition text-sm flex items-center gap-2 border border-white/30 cursor-pointer">
+                        <i class="fas fa-tachometer-alt"></i> Buka Dashboard Anggaran
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-1 animated-item" style="--animation-delay: 200ms;">
+            <div class="feature-panel flex flex-col justify-between">
+                <div>
+                    <h3 class="font-bold text-lg mb-6 text-gray-800 flex items-center gap-2">
+                        <i class="fas fa-star text-yellow-500"></i> Fitur Unggulan
+                    </h3>
+                    
+                    <div class="feature-item blue cursor-pointer" onclick="$('.nav-link[data-page=\'Dashboard\']').click();">
+                        <div class="feature-icon blue"><i class="fas fa-wallet"></i></div>
+                        <div class="feature-text">
+                            <h4>Monitoring Anggaran</h4>
+                            <p>Pantau Pagu & Realisasi.</p>
+                        </div>
+                    </div>
+
+                    <div class="feature-item green">
+                        <div class="feature-icon green"><i class="fas fa-users-cog"></i></div>
+                        <div class="feature-text">
+                            <h4>Manajemen Tim</h4>
+                            <p>Tracking kegiatan per tim.</p>
+                        </div>
+                    </div>
+
+                    <div class="feature-item purple">
+                        <div class="feature-icon purple"><i class="fas fa-chart-pie"></i></div>
+                        <div class="feature-text">
+                            <h4>Analisis Kinerja</h4>
+                            <p>Laporan capaian & indikator.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="relative flex h-3 w-3">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                        </span>
+                        <span class="font-semibold text-sm text-gray-700">Status Terkini</span>
+                    </div>
+                    <p class="text-xs text-gray-500 leading-relaxed">
+                        Data disinkronisasi secara real-time dengan Google Sheets Database.
+                    </p>
+                    <p class="text-xs text-gray-400 mt-2 border-t pt-2">
+                        <i class="far fa-clock mr-1"></i> <span id="last-update-text">Memuat waktu...</span>
+                    </p>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // Script kecil untuk menampilkan waktu hari ini
+    (function() {
+        const now = new Date();
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('last-update-text').innerText = now.toLocaleDateString('id-ID', options);
+    })();
+</script>

@@ -1,0 +1,41 @@
+<div id="team-page-content" class="page-container w-full max-w-7xl mx-auto p-4 lg:p-6">
+  
+    <header class="bg-[#1e3a8a] rounded-xl shadow-lg p-6 mb-8 text-white relative overflow-hidden">
+      <div class="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-blue-500 opacity-10 rounded-full blur-3xl pointer-events-none"></div>
+  
+      <div class="relative z-10 space-y-4">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div class="space-y-1">
+                  <h1 id="team-page-title" class="text-2xl md:text-3xl font-bold tracking-wide text-white uppercase flex items-center gap-2">
+                     KEGIATAN TIM
+                  </h1>
+                  <p class="text-blue-100 text-sm">
+                      Kelola semua kegiatan yang berhubungan dengan tim ini.
+                  </p>
+              </div>
+              
+              <button id="add-team-item-btn" class="bg-white text-[#1e3a8a] hover:bg-blue-50 px-5 py-2.5 rounded-lg font-bold shadow-md transition-all flex items-center gap-2 text-sm uppercase tracking-wider transform active:scale-95">
+                  <i class="fas fa-plus"></i>
+                  <span>Tambah Kegiatan</span>
+              </button>
+          </div>
+  
+          <div class="relative w-full mt-4">
+              <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <i class="fas fa-search text-blue-300"></i>
+              </div>
+              <input id="team-search-input" type="text" 
+                  class="w-full pl-11 pr-4 py-3 bg-[#2d4b9e] border border-blue-700/50 rounded-lg text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-[#3b5eb5] transition-all" 
+                  placeholder="Cari kegiatan, ketua, atau deskripsi...">
+          </div>
+      </div>
+    </header>
+    
+    <div id="team-item-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div class="col-span-full text-center py-12 text-gray-400">
+          <i class="fas fa-circle-notch fa-spin text-3xl mb-3 text-blue-500"></i>
+          <p>Memuat data kegiatan...</p>
+      </div>
+    </div>
+  
+  </div>

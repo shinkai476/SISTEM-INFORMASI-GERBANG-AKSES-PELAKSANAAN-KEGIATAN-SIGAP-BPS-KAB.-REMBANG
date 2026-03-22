@@ -1,0 +1,333 @@
+<style>
+    /* ========================================================================= */
+    /* =================== STYLESHEET APLIKASI (MODERN V3) ===================== */
+    /* ========================================================================= */
+    
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+    @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+    
+    :root {
+        /* --- COLOR PALETTE MODERN (DARK SIDEBAR THEME) --- */
+        --color-bg-body: #F3F4F6;
+        --color-bg-sidebar: #111827;
+        --color-bg-card: #FFFFFF;
+        
+        /* Text Colors */
+        --text-primary: #1F2937;
+        --text-body: #4B5563;
+        --text-muted: #9CA3AF;
+        --text-sidebar: #D1D5DB;
+        --text-sidebar-hover: #FFFFFF;
+        
+        /* Brand Colors */
+        --color-primary: #3B82F6;
+        --color-primary-dark: #2563EB;
+        --color-secondary: #6366F1;
+        --color-accent: #8B5CF6;
+        
+        /* Functional Colors */
+        --color-success: #10B981;
+        --color-warning: #F59E0B;
+        --color-danger: #EF4444;
+        --color-border: #E5E7EB;
+    
+        /* Gradients */
+        --gradient-banner: linear-gradient(135deg, #1E40AF 0%, #7C3AED 100%);
+        
+        /* Shadows */
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    
+    /* --- RESET & GLOBAL --- */
+    * { box-sizing: border-box; }
+    
+    html { scroll-behavior: smooth; font-size: 16px; }
+    
+    body {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        background-color: var(--color-bg-body);
+        color: var(--text-body);
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+    }
+    
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+    
+    /* ========================================================================= */
+    /* ======================== SIDEBAR STYLES (DARK) ========================== */
+    /* ========================================================================= */
+    
+    #sidebar {
+        background-color: var(--color-bg-sidebar);
+        color: var(--text-sidebar);
+        border-right: 1px solid #1F2937;
+    }
+    
+    #sidebar .nav-link {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        margin-bottom: 0.25rem;
+        border-radius: 0.5rem;
+        color: var(--text-sidebar);
+        transition: all 0.2s ease-in-out;
+        border-left: 3px solid transparent;
+    }
+    
+    #sidebar .nav-link:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+        color: var(--text-sidebar-hover);
+    }
+    
+    #sidebar .nav-link.active {
+        background-color: rgba(59, 130, 246, 0.15);
+        color: #60A5FA;
+        border-left-color: #60A5FA;
+    }
+    
+    #sidebar .nav-link i {
+        width: 24px;
+        text-align: center;
+        font-size: 1.1em;
+    }
+    
+    /* ========================================================================= */
+    /* ===================== HOME PAGE (DASHBOARD DESIGN) ====================== */
+    /* ========================================================================= */
+    
+    /* 1. KARTU STATISTIK (TOP ROW) */
+    .stat-card-modern {
+        background: var(--color-bg-card);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        box-shadow: var(--shadow-card);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border: 1px solid var(--color-border);
+    }
+    
+    .stat-card-modern:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .stat-icon-box {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+    
+    .stat-card-modern .label { font-size: 0.875rem; color: var(--text-muted); font-weight: 500; }
+    .stat-card-modern .value { font-size: 1.75rem; font-weight: 700; color: var(--text-primary); line-height: 1.2; margin-top: 4px; }
+    .stat-card-modern .trend { font-size: 0.75rem; font-weight: 600; margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+    .trend.up { color: var(--color-success); }
+    .trend.down { color: var(--color-danger); }
+    
+    /* 2. WELCOME BANNER (GRADIENT) */
+    .welcome-banner {
+        background: var(--gradient-banner);
+        border-radius: 1.25rem;
+        padding: 2.5rem;
+        color: white;
+        box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.3);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .welcome-banner::before, .welcome-banner::after {
+        content: ''; position: absolute; border-radius: 50%; background: rgba(255,255,255,0.05); z-index: 0;
+    }
+    .welcome-banner::before { width: 300px; height: 300px; top: -50px; right: -50px; }
+    .welcome-banner::after { width: 150px; height: 150px; bottom: 20px; left: 20%; }
+    
+    .welcome-title { 
+        font-size: 1.85rem; font-weight: 800; margin-bottom: 0.5rem; position: relative; z-index: 1; 
+        display: flex; align-items: center; gap: 0.75rem;
+    }
+    .welcome-subtitle { 
+        color: rgba(255,255,255,0.9); font-size: 1rem; max-width: 650px; margin-bottom: 2rem; position: relative; z-index: 1; 
+    }
+    
+    .visi-misi-box {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        height: 100%;
+        position: relative; z-index: 1;
+        transition: background 0.2s;
+    }
+    .visi-misi-box:hover { background: rgba(255, 255, 255, 0.15); }
+    
+    .visi-misi-heading { 
+        font-weight: 700; color: #FFD700; text-transform: uppercase; 
+        letter-spacing: 0.05em; margin-bottom: 0.75rem; font-size: 0.85rem; display: flex; align-items: center;
+    }
+    .visi-text { font-style: italic; font-size: 1.05rem; line-height: 1.6; color: white; }
+    .misi-list { list-style: none; padding: 0; margin: 0; }
+    .misi-list li { 
+        position: relative; padding-left: 1.25rem; margin-bottom: 0.5rem; 
+        font-size: 0.95rem; color: rgba(255,255,255,0.95); 
+    }
+    .misi-list li::before {
+        content: '•'; color: #FFD700; position: absolute; left: 0; font-size: 1.5rem; line-height: 1rem; top: 2px;
+    }
+    
+    /* 3. FEATURE PANEL (SIDEBAR KANAN HOME) */
+    .feature-panel {
+        background: var(--color-bg-card);
+        border-radius: 1.25rem;
+        padding: 1.5rem;
+        box-shadow: var(--shadow-card);
+        border: 1px solid var(--color-border);
+        height: 100%;
+    }
+    .feature-item {
+        display: flex; align-items: center; gap: 1rem;
+        padding: 1rem; margin-bottom: 0.75rem;
+        border-radius: 1rem; transition: transform 0.2s;
+    }
+    .feature-item:hover { transform: translateX(5px); }
+    
+    .feature-item.blue { background-color: #EFF6FF; }
+    .feature-item.green { background-color: #ECFDF5; }
+    .feature-item.purple { background-color: #F5F3FF; }
+    
+    .feature-icon {
+        width: 42px; height: 42px; border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        color: white; font-size: 1.1rem; flex-shrink: 0;
+    }
+    .feature-icon.blue { background-color: var(--color-primary); }
+    .feature-icon.green { background-color: var(--color-success); }
+    .feature-icon.purple { background-color: var(--color-accent); }
+    
+    .feature-text h4 { font-weight: 700; font-size: 0.95rem; color: var(--text-primary); margin: 0; }
+    .feature-text p { font-size: 0.8rem; color: var(--text-muted); margin: 2px 0 0 0; }
+    
+    /* ========================================================================= */
+    /* ===================== KOMPONEN UI UMUM (BUTTONS, ETC) =================== */
+    /* ========================================================================= */
+    
+    .btn {
+        display: inline-flex; align-items: center; justify-content: center;
+        padding: 0.625rem 1.25rem; border-radius: 0.5rem;
+        font-weight: 600; font-size: 0.875rem;
+        transition: all 0.2s ease; cursor: pointer; border: none; outline: none;
+    }
+    .btn:disabled { opacity: 0.7; cursor: not-allowed; }
+    
+    .btn-primary { background-color: var(--color-primary); color: white; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.4); }
+    .btn-primary:hover:not(:disabled) { background-color: var(--color-primary-dark); transform: translateY(-1px); }
+    
+    .btn-secondary { background-color: white; color: var(--text-primary); border: 1px solid var(--color-border); }
+    .btn-secondary:hover:not(:disabled) { background-color: #F9FAFB; border-color: #D1D5DB; }
+    
+    .btn-danger { background-color: #FEE2E2; color: var(--color-danger); }
+    .btn-danger:hover:not(:disabled) { background-color: #FECACA; }
+    
+    .form-input, .form-textarea, select {
+        width: 100%;
+        background-color: white;
+        border: 1px solid var(--color-border);
+        border-radius: 0.5rem;
+        padding: 0.625rem 1rem;
+        color: var(--text-primary);
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .form-input:focus, .form-textarea:focus, select:focus {
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        outline: none;
+    }
+    
+    .modal-container {
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background-color: rgba(17, 24, 39, 0.7);
+        backdrop-filter: blur(4px);
+        display: flex; align-items: center; justify-content: center;
+        padding: 1rem; z-index: 9999;
+        opacity: 0; visibility: hidden;
+        transition: all 0.3s ease;
+    }
+    .modal-container.is-active { opacity: 1; visibility: visible; }
+    
+    .modal-box {
+        background: white;
+        border-radius: 1rem;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        width: 100%; max-width: 550px;
+        transform: scale(0.95); transition: transform 0.3s ease;
+        display: flex; flex-direction: column; max-height: 90vh;
+    }
+    .modal-container.is-active .modal-box { transform: scale(1); }
+    
+    .modal-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center; }
+    .modal-body { padding: 1.5rem; overflow-y: auto; }
+    .modal-footer { padding: 1.25rem 1.5rem; border-top: 1px solid var(--color-border); background-color: #F9FAFB; border-bottom-left-radius: 1rem; border-bottom-right-radius: 1rem; display: flex; justify-content: flex-end; gap: 0.75rem; }
+    
+    .animated-item { opacity: 0; animation: fadeInUp 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; animation-delay: var(--animation-delay, 0s); }
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .shimmer {
+        background: linear-gradient(90deg, #E5E7EB 25%, #F3F4F6 50%, #E5E7EB 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    
+    .notification {
+        position: fixed; top: 1.5rem; right: 1.5rem; z-index: 10000;
+        padding: 1rem 1.5rem; border-radius: 0.75rem; color: white;
+        box-shadow: var(--shadow-lg); font-weight: 500;
+        display: flex; align-items: center; gap: 0.75rem;
+        animation: slideInRight 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    }
+    .notification.bg-green-500 { background-color: var(--color-success); }
+    .notification.bg-red-500 { background-color: var(--color-danger); }
+    @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    
+    .kpi-card {
+        background: var(--color-bg-card);
+        border-radius: 1rem;
+        box-shadow: var(--shadow-card);
+        border: 1px solid var(--color-border);
+    }
+    
+    @media (min-width: 1024px) {
+        .page-container { padding: 2.5rem; max-width: 1600px; margin: 0 auto; }
+    }
+    
+    .view-section {
+        width: 100%;
+        height: 100%;
+        animation: fadeIn 0.3s ease-in-out;
+    }
+    
+    .hidden-view {
+        display: none !important;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(5px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    </style>

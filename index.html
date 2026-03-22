@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BPS Kabupaten Rembang - Dashboard</title>
+    
+    <!-- Logo pada Tab Browser (Favicon) -->
+    <link rel="icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/Lambang_Badan_Pusat_Statistik_%28BPS%29_Indonesia.svg/640px-Lambang_Badan_Pusat_Statistik_%28BPS%29_Indonesia.svg.png" type="image/png">
+
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
+    <link rel="preconnect" href="https://code.jquery.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.datatables.net" crossorigin>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" xintegrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js" integrity="sha256-2Pmvv0kuTBOenSvLm6bvfBSSHrUJ+3A7x6P5Ebd07/g=" crossorigin="anonymous" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js" defer></script>
+
+    <?!= include('stylesheet'); ?>
+</head>
+<body class="flex flex-col min-h-screen font-sans bg-gray-100">
+
+    <header class="lg:hidden bg-[#111827] text-white border-b border-gray-700 sticky top-0 z-40 flex justify-between items-center p-4 shadow-md">
+        <div class="flex items-center gap-3">
+            <div class="h-10 w-10 flex-shrink-0">
+                <!-- Logo Header Mobile Diperbarui -->
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/Lambang_Badan_Pusat_Statistik_%28BPS%29_Indonesia.svg/640px-Lambang_Badan_Pusat_Statistik_%28BPS%29_Indonesia.svg.png" 
+                     alt="Logo BPS" 
+                     class="h-full w-full object-contain">
+            </div>
+            <h1 class="text-sm font-bold tracking-wide">BPS Rembang</h1>
+        </div>
+        <button id="hamburger-btn" class="text-xl p-2 text-gray-300 hover:text-white" aria-label="Buka menu navigasi">
+            <i class="fas fa-bars"></i>
+        </button>
+    </header>
+
+    <div class="flex flex-1 h-screen overflow-hidden">
+        
+        <aside id="sidebar" class="bg-[#111827] w-full max-w-[280px] lg:w-72 flex flex-col absolute lg:relative transform -translate-x-full lg:translate-x-0 transition-all duration-300 ease-in-out z-50 h-full flex-shrink-0 border-r border-gray-800 shadow-xl overflow-hidden">
+            
+            <div class="p-6 flex items-center gap-4 mb-2 min-w-[280px]">
+                <div class="h-12 w-12 flex-shrink-0">
+                    <!-- Logo Sidebar Diperbarui -->
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/Lambang_Badan_Pusat_Statistik_%28BPS%29_Indonesia.svg/640px-Lambang_Badan_Pusat_Statistik_%28BPS%29_Indonesia.svg.png" 
+                         alt="Logo BPS" 
+                         class="h-full w-full object-contain">
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-white font-bold text-lg leading-none">BPS KAB.</span>
+                    <span class="text-white font-bold text-lg leading-none">REMBANG</span>
+                </div>
+            </div>
+
+            <nav id="sidebar-menu" class="flex-grow overflow-y-auto px-3 space-y-1 min-w-[280px]">
+                
+                <div class="mb-6">
+                    <h2 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 mt-4">Utama</h2>
+                    
+                    <a href="#" class="nav-link flex items-center px-3 py-3 text-sm font-medium rounded-md text-gray-300 hover:bg-gray-800 hover:text-white transition-colors group active" data-page="Beranda">
+                        <i class="fas fa-home w-6 text-center text-gray-400 group-hover:text-white transition-colors"></i>
+                        <span class="ml-2">Beranda</span>
+                    </a>
+                    
+                    <a href="#" class="nav-link flex items-center px-3 py-3 text-sm font-medium rounded-md text-gray-300 hover:bg-gray-800 hover:text-white transition-colors group" data-page="Dashboard">
+                        <i class="fas fa-chart-pie w-6 text-center text-gray-400 group-hover:text-white transition-colors"></i>
+                        <span class="ml-2">Dashboard Anggaran</span>
+                    </a>
+                </div>
+                
+                <div>
+                    <h2 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Tim Kerja</h2>
+                    
+                    <div id="dynamic-team-list" class="space-y-1">
+                        <p class="px-3 text-xs text-gray-500 italic py-2">Memuat data tim...</p>
+                    </div>
+
+                    <div class="mt-4 px-2 space-y-2 border-t border-gray-800 pt-4">
+                        <button id="add-new-team-btn" class="w-full flex items-center px-2 py-2 text-xs font-medium text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 rounded transition-colors">
+                            <i class="fas fa-plus-circle w-5 text-center"></i>
+                            Tambah Tim Baru
+                        </button>
+                        <button id="delete-team-btn" class="w-full flex items-center px-2 py-2 text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded transition-colors">
+                            <i class="fas fa-trash-alt w-5 text-center"></i>
+                            Hapus Tim
+                        </button>
+                    </div>
+                </div>
+
+            </nav>
+            
+            <div class="p-4 border-t border-gray-800 min-w-[280px]">
+                <p class="text-xs text-center text-gray-600">© 2025 BPS Kabupaten Rembang</p>
+            </div>
+        </aside>
+        
+        <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden hidden transition-opacity"></div>
+
+        <main class="flex-1 relative overflow-y-auto h-full bg-[#F3F4F6] w-full flex flex-col">
+            
+            <header class="hidden lg:flex bg-white border-b border-gray-200 px-6 py-3 items-center justify-between sticky top-0 z-30 shadow-sm">
+                <div class="flex items-center gap-4">
+                    <button id="desktop-sidebar-toggle" class="text-gray-500 hover:text-blue-600 focus:outline-none p-2 rounded-md hover:bg-gray-100 transition-colors" title="Toggle Sidebar">
+                        <i class="fas fa-bars text-lg"></i>
+                    </button>
+                    
+                    <div class="h-6 w-px bg-gray-300"></div> <h2 class="text-base font-bold text-gray-800 tracking-tight" id="page-header-title">
+                        BPS Kabupaten Rembang
+                    </h2>
+                </div>
+                
+                <div class="flex items-center gap-3 text-sm text-gray-500 font-medium bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
+                    <i class="far fa-calendar-alt text-blue-500"></i>
+                    <span id="header-date-display">Memuat tanggal...</span>
+                </div>
+            </header>
+
+            <div id="main-content" class="w-full flex-1 p-0 relative">
+                <!-- 
+                   PERUBAHAN UTAMA UNTUK SPA:
+                   Kita siapkan wadah (container) untuk Beranda dan Dashboard 
+                   agar tidak perlu di-load ulang server setiap kali klik.
+                -->
+                <div id="view-Beranda" class="view-section"></div>
+                <div id="view-Dashboard" class="view-section hidden-view"></div>
+                <!-- Container dinamis untuk tim akan direuse -->
+                <div id="view-Team-Dynamic" class="view-section hidden-view"></div>
+            </div>
+        </main>
+    </div>
+
+    <?!= include('modals'); ?>
+    <?!= include('javascript'); ?>
+</body>
+</html>

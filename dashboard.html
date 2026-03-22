@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Realisasi Anggaran</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.dataTables.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
+
+    <style>
+        /* Card Styling */
+        .kpi-card { 
+            background: white; 
+            border-radius: 0.75rem; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+            transition: transform 0.2s, box-shadow 0.2s; 
+            border: 1px solid #e2e8f0; 
+            display: flex;
+            flex-direction: column;
+        }
+        .kpi-card:hover { 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        /* Wrapper Chart agar tidak gepeng */
+        .chart-container {
+            position: relative;
+            height: 350px;
+            width: 100%;
+            margin-top: auto;
+        }
+
+        /* DataTables Customization */
+        .dataTables_wrapper .dataTables_length select { 
+            padding-right: 24px; 
+            border-radius: 4px; 
+            border: 1px solid #cbd5e1; 
+            padding: 4px 8px;
+        }
+        .dataTables_wrapper .dataTables_filter input { 
+            border-radius: 4px; 
+            border: 1px solid #cbd5e1; 
+            padding: 4px 8px; 
+            margin-left: 8px; 
+        }
+        table.dataTable thead th { 
+            background-color: #f8fafc; 
+            border-bottom: 2px solid #e2e8f0; 
+            color: #64748b; 
+            font-size: 0.75rem; 
+            text-transform: uppercase; 
+            letter-spacing: 0.05em;
+            padding: 12px 10px;
+        }
+        table.dataTable tbody td { 
+            padding: 12px 10px; 
+            border-bottom: 1px solid #f1f5f9; 
+        }
+        table.dataTable.no-footer {
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        /* Styling Dropdown Filter */
+        select:disabled {
+            background-color: #f1f5f9;
+            color: #94a3b8;
+            cursor: not-allowed;
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* DataTables Pagination */
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            border-radius: 4px;
+            margin: 0 2px;
+            border: 1px solid #e2e8f0;
+        }
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+            background: #3b82f6 !important;
+            color: white !important;
+            border-color: #3b82f6 !important;
+        }
+        .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+            background: #f1f5f9 !important;
+            border-color: #cbd5e1 !important;
+        }
+    </style>
+</head>
+<body class="text-slate-800 bg-[#f8fafc]">
+
+    <div class="max-w-[1600px] mx-auto p-4 md:p-6 lg:p-8">
+        
+        <header class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-slate-800 tracking-tight">Dashboard Realisasi Anggaran</h1>
+                <p class="text-slate-500 mt-1 text-sm">Monitoring Kinerja Program dan Kegiatan T.A. 2025</p>
+            </div>
+            <div class="bg-white px-4 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 shadow-sm flex items-center gap-2">
+                <span class="relative flex h-2 w-2">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                Data Live
+            </div>
+        </header>
+
+        <div class="grid grid-cols-12 gap-6">
+            
+            <div class="col-span-12 lg:col-span-9 space-y-6">
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="kpi-card p-5 border-l-4 border-blue-500">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Pagu</p>
+                                <p id="totalPagu" class="text-lg md:text-xl font-bold text-slate-800 mt-1">-</p>
+                            </div>
+                            <div class="p-2 bg-blue-50 rounded-lg text-blue-600"><i class="fas fa-wallet"></i></div>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card p-5 border-l-4 border-emerald-500">
+                         <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Realisasi</p>
+                                <p id="totalRealisasi" class="text-lg md:text-xl font-bold text-emerald-600 mt-1">-</p>
+                            </div>
+                            <div class="p-2 bg-emerald-50 rounded-lg text-emerald-600"><i class="fas fa-coins"></i></div>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card p-5 border-l-4 border-amber-500">
+                         <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Sisa Anggaran</p>
+                                <p id="sisaAnggaran" class="text-lg md:text-xl font-bold text-amber-500 mt-1">-</p>
+                            </div>
+                            <div class="p-2 bg-amber-50 rounded-lg text-amber-600"><i class="fas fa-piggy-bank"></i></div>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card p-5 border-l-4 border-indigo-500">
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Persentase Capaian</p>
+                        <div class="flex items-end gap-2 mt-1">
+                            <p id="persentaseCapaian" class="text-2xl font-bold text-indigo-600">-</p>
+                        </div>
+                        <div class="w-full bg-slate-100 h-1.5 mt-3 rounded-full overflow-hidden">
+                            <div id="capaianBar" class="bg-indigo-600 h-full transition-all duration-1000 rounded-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                    <div class="kpi-card p-5">
+                        <div class="mb-4">
+                            <h3 class="text-sm font-bold text-slate-700 flex items-center gap-2">
+                                <span class="w-2 h-6 bg-emerald-500 rounded-sm"></span>
+                                10 Realisasi Tertinggi (Rp)
+                            </h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="chartTopReal"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card p-5">
+                        <div class="mb-4">
+                            <h3 class="text-sm font-bold text-slate-700 flex items-center gap-2">
+                                <span class="w-2 h-6 bg-amber-500 rounded-sm"></span>
+                                10 Sisa Anggaran Terbesar (Rp)
+                            </h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="chartTopSisa"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kpi-card p-6 overflow-hidden">
+                    <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
+                        <h3 class="text-lg font-bold text-slate-700">Rincian Data Anggaran</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table id="dataTable" class="stripe hover w-full text-sm" style="width:100%"></table>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="col-span-12 lg:col-span-3 space-y-6">
+                <div class="kpi-card p-5 sticky top-6 border-t-4 border-t-blue-600">
+                    <h3 class="font-bold text-slate-800 mb-6 pb-2 border-b border-slate-100 flex items-center gap-2">
+                        <i class="fas fa-filter text-blue-500"></i> Filter & Pencarian
+                    </h3>
+                    
+                    <div class="mb-4">
+                        <label class="text-xs font-bold text-slate-400 uppercase block mb-2">Program Utama</label>
+                        <select id="filter-program" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition cursor-pointer">
+                            <option value="">Semua Program</option>
+                            <option value="WA">WA - Dukungan Manajemen</option>
+                            <option value="GG">GG - Pelayanan Statistik</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-5">
+                        <label class="text-xs font-bold text-slate-400 uppercase block mb-2">Kegiatan</label>
+                        <select id="filter-kegiatan" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition cursor-pointer" disabled>
+                            <option value="">-- Pilih Program Dulu --</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-5">
+                        <label class="text-xs font-bold text-slate-400 uppercase block mb-2">Cari Cepat</label>
+                        <div class="relative">
+                            <i class="fas fa-search absolute left-3 top-3 text-slate-400 text-sm"></i>
+                            <input type="text" id="customSearch" placeholder="Ketik uraian..." class="w-full pl-9 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                        </div>
+                    </div>
+
+                    <div class="mb-5">
+                        <div class="flex justify-between mb-2 items-center">
+                            <label class="text-xs font-bold text-slate-400 uppercase">Min. Capaian</label>
+                            <span id="rangeVal" class="text-xs font-bold text-white bg-blue-500 px-2 py-0.5 rounded-full">0%</span>
+                        </div>
+                        <input type="range" id="rangeFilter" min="0" max="100" value="0" class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                    </div>
+
+                    <div class="mb-6 pt-4 border-t border-slate-100">
+                        <label class="flex items-center space-x-3 cursor-pointer group p-2 hover:bg-slate-50 rounded-lg transition">
+                            <input type="checkbox" id="checkBig" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer">
+                            <span class="text-sm text-slate-600 font-medium group-hover:text-blue-600 transition">Hanya Pagu > 100 Juta</span>
+                        </label>
+                    </div>
+
+                    <button id="resetBtn" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2 border border-slate-200 cursor-pointer">
+                        <i class="fas fa-undo-alt"></i> Reset Filter
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- SAFE DATA PARSING (REMOVED GOOGLE APPS SCRIPT SYNTAX) ---
+        let serverData = null;
+        
+        // Cek apakah data tersedia dari server (untuk Google Apps Script)
+        if (typeof data !== 'undefined' && data) {
+            try {
+                serverData = typeof data === 'string' ? JSON.parse(data) : data;
+            } catch(e) {
+                console.error("Error parsing data:", e);
+            }
+        }
+        
+        // Fallback untuk testing lokal (HAPUS/TIMPA ini saat deploy ke GAS)
+        if (!serverData) {
+            serverData = {
+                budget: {
+                    success: true,
+                    allData: [
+                        { uraian: "[WA] Dukungan Manajemen Kantor", paguRevisi: 500000000, sdPeriode: 350000000, persenRealisasi: 0.70 },
+                        { uraian: "[GG.2898] Statistik Neraca Pengeluaran", paguRevisi: 250000000, sdPeriode: 200000000, persenRealisasi: 0.80 },
+                        { uraian: "[GG.2899] Statistik Neraca Produksi", paguRevisi: 300000000, sdPeriode: 150000000, persenRealisasi: 0.50 },
+                        { uraian: "[GG.2896] Statistik Sosial", paguRevisi: 400000000, sdPeriode: 380000000, persenRealisasi: 0.95 },
+                        { uraian: "[GG.2897] Statistik Produksi", paguRevisi: 350000000, sdPeriode: 175000000, persenRealisasi: 0.50 },
+                        { uraian: "[GG.2900] Statistik Distribusi", paguRevisi: 200000000, sdPeriode: 180000000, persenRealisasi: 0.90 },
+                        { uraian: "JUMLAH SELURUHNYA", paguRevisi: 2000000000, sdPeriode: 1435000000, persenRealisasi: 0.7175 }
+                    ]
+                }
+            };
+        }
+
+        // --- FORMAT CURRENCY ---
+        const formatRp = (n) => new Intl.NumberFormat('id-ID', { 
+            style: 'currency', 
+            currency: 'IDR', 
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(n || 0);
+        
+        // --- FORMAT NUMBER UNTUK DATATABLE ---
+        const formatNumber = (num) => {
+            return new Intl.NumberFormat('id-ID').format(num || 0);
+        };
+        
+        let tableInstance;
+        if (typeof window.dashboardCharts === 'undefined') { 
+            window.dashboardCharts = {}; 
+        }
+
+        // --- DEFINISI DATA DROPDOWN (PROGRAM & KEGIATAN) ---
+        const programData = {
+            "WA": [
+                { id: "WA", text: "WA - Dukungan Manajemen" }
+            ],
+            "GG": [
+                { id: "GG.2898", text: "GG.2898 - Statistik Neraca Pengeluaran" },
+                { id: "GG.2899", text: "GG.2899 - Statistik Neraca Produksi" },
+                { id: "GG.2896", text: "GG.2896 - Statistik Sosial" },
+                { id: "GG.2897", text: "GG.2897 - Statistik Produksi" },
+                { id: "GG.2900", text: "GG.2900 - Statistik Distribusi dan Jasa" }
+            ]
+        };
+
+        $(document).ready(function() {
+            if(!serverData || !serverData.budget || !serverData.budget.success) {
+                console.warn("Data anggaran kosong.");
+                // Tampilkan pesan error di UI
+                $('#totalPagu').text('Data tidak tersedia');
+                return;
+            }
+            
+            const rawData = serverData.budget.allData || [];
+            
+            renderKPI(rawData);
+            renderCharts(rawData);
+            initTable(rawData);
+            initFilters();
+        });
+
+        // --- KPI LOGIC ---
+        function renderKPI(data) {
+            const cleanData = data.filter(d => !String(d.uraian).toUpperCase().includes("JUMLAH SELURUHNYA"));
+            const grandTotalRow = data.find(d => String(d.uraian).toUpperCase().includes("JUMLAH SELURUHNYA"));
+            
+            let pagu = 0, real = 0;
+            
+            if (grandTotalRow) {
+                 pagu = grandTotalRow.paguRevisi || 0;
+                 real = grandTotalRow.sdPeriode || 0;
+            } else {
+                 pagu = cleanData.reduce((acc, curr) => acc + (curr.paguRevisi || 0), 0);
+                 real = cleanData.reduce((acc, curr) => acc + (curr.sdPeriode || 0), 0);
+            }
+
+            let sisa = pagu - real;
+            let pct = pagu > 0 ? (real / pagu * 100) : 0;
+
+            $('#totalPagu').text(formatRp(pagu));
+            $('#totalRealisasi').text(formatRp(real));
+            $('#sisaAnggaran').text(formatRp(sisa));
+            $('#persentaseCapaian').text(pct.toFixed(2) + '%');
+            $('#capaianBar').css('width', Math.min(pct, 100) + '%');
+        }
+
+        // --- CHART LOGIC ---
+        function renderCharts(data) {
+            const cleanData = data.filter(d => {
+                const u = String(d.uraian).toUpperCase();
+                return !u.includes("JUMLAH SELURUHNYA") && !u.includes("TOTAL") && d.paguRevisi > 0;
+            });
+
+            // 1. Chart Top Realisasi
+            const sortedReal = [...cleanData].sort((a,b) => b.sdPeriode - a.sdPeriode).slice(0, 10);
+            createChart('chartTopReal', 'bar', {
+                labels: sortedReal.map(d => {
+                    let s = String(d.uraian).replace(/^\[.*?\]/, '').trim();
+                    return s.length > 35 ? s.substring(0,35)+'...' : s;
+                }),
+                datasets: [{ 
+                    label: 'Realisasi', 
+                    data: sortedReal.map(d => d.sdPeriode), 
+                    backgroundColor: '#10b981', 
+                    borderRadius: 4,
+                    barThickness: 20
+                }]
+            }, { indexAxis: 'y' });
+
+            // 2. Chart Top Sisa
+            const sortedSisa = [...cleanData].sort((a,b) => (b.paguRevisi - b.sdPeriode) - (a.paguRevisi - a.sdPeriode)).slice(0, 10);
+            createChart('chartTopSisa', 'bar', {
+                labels: sortedSisa.map(d => {
+                     let s = String(d.uraian).replace(/^\[.*?\]/, '').trim();
+                     return s.length > 35 ? s.substring(0,35)+'...' : s;
+                }),
+                datasets: [{ 
+                    label: 'Sisa Anggaran', 
+                    data: sortedSisa.map(d => (d.paguRevisi - d.sdPeriode)), 
+                    backgroundColor: '#f59e0b', 
+                    borderRadius: 4,
+                    barThickness: 20
+                }]
+            }, { indexAxis: 'y' });
+        }
+
+        function createChart(canvasId, type, data, extraOptions = {}) {
+            const ctx = document.getElementById(canvasId);
+            if(!ctx) return;
+            if (window.dashboardCharts[canvasId]) { 
+                window.dashboardCharts[canvasId].destroy(); 
+            }
+
+            window.dashboardCharts[canvasId] = new Chart(ctx, {
+                type: type,
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: { 
+                                label: (c) => ' Rp ' + new Intl.NumberFormat('id-ID').format(c.raw) 
+                            },
+                            backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                            padding: 12,
+                            cornerRadius: 8
+                        }
+                    },
+                    scales: {
+                        x: { 
+                            ticks: { 
+                                font: {size: 10}, 
+                                callback: v => (v/1000000).toFixed(0) + ' Jt' 
+                            }, 
+                            grid: { display: false },
+                            border: { display: false }
+                        },
+                        y: { 
+                            ticks: { font: {size: 10}, autoSkip: false }, 
+                            grid: { color: '#f1f5f9' },
+                            border: { display: false }
+                        }
+                    },
+                    ...extraOptions
+                }
+            });
+        }
+
+        // --- DATATABLE LOGIC ---
+        function initTable(data) {
+            if ($.fn.DataTable.isDataTable('#dataTable')) { 
+                $('#dataTable').DataTable().destroy(); 
+            }
+            
+            const cleanTableData = data.filter(d => !String(d.uraian).toUpperCase().includes("JUMLAH SELURUHNYA"));
+
+            const tableData = cleanTableData.map(d => [
+                d.uraian,
+                d.paguRevisi,
+                d.sdPeriode,
+                d.paguRevisi - d.sdPeriode,
+                (d.persenRealisasi * 100).toFixed(2)
+            ]);
+
+            tableInstance = $('#dataTable').DataTable({
+                data: tableData,
+                pageLength: 5,
+                lengthMenu: [5, 10, 25, 50],
+                dom: 'rtip', 
+                order: [[1, 'desc']],
+                responsive: true,
+                columns: [
+                    { 
+                        title: "Uraian Kegiatan", 
+                        width: "40%", 
+                        render: t => `<div class="font-medium text-slate-700 truncate" title="${t}">${t}</div>` 
+                    },
+                    { 
+                        title: "Pagu", 
+                        className: "text-right font-mono text-xs text-slate-600", 
+                        render: (data) => formatNumber(data)
+                    },
+                    { 
+                        title: "Realisasi", 
+                        className: "text-right font-mono text-xs text-blue-600 font-bold", 
+                        render: (data) => formatNumber(data)
+                    },
+                    { 
+                        title: "Sisa", 
+                        className: "text-right font-mono text-xs text-slate-500", 
+                        render: (data) => formatNumber(data)
+                    },
+                    { 
+                        title: "%", 
+                        className: "text-center font-bold text-xs", 
+                        render: v => {
+                            let val = parseFloat(v);
+                            let color = val > 80 ? 'bg-emerald-100 text-emerald-700' : 
+                                       (val > 50 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700');
+                            return `<span class="px-2 py-1 rounded ${color}">${val}%</span>`;
+                        }
+                    }
+                ],
+                language: {
+                    zeroRecords: "Data tidak ditemukan",
+                    info: "Halaman _PAGE_ dari _PAGES_",
+                    infoEmpty: "Tidak ada data yang tersedia",
+                    lengthMenu: "Tampilkan _MENU_ data",
+                    paginate: { 
+                        next: '<i class="fas fa-chevron-right"></i>', 
+                        previous: '<i class="fas fa-chevron-left"></i>',
+                        first: 'Awal',
+                        last: 'Akhir'
+                    }
+                }
+            });
+        }
+
+        // --- FILTERS (TERMASUK CASCADING DROPDOWN) ---
+        function initFilters() {
+            
+            // A. LOGIKA CASCADING DROPDOWN
+            $('#filter-program').on('change', function() {
+                const prog = $(this).val();
+                const $kegiatan = $('#filter-kegiatan');
+                
+                // Reset dropdown kegiatan
+                $kegiatan.empty();
+                
+                if (prog && programData[prog]) {
+                    $kegiatan.prop('disabled', false);
+                    $kegiatan.append('<option value="">Semua Kegiatan</option>');
+                    
+                    // Isi opsi berdasarkan data yang dipilih (WA/GG)
+                    programData[prog].forEach(item => {
+                        $kegiatan.append(`<option value="${item.id}">${item.text}</option>`);
+                    });
+                } else {
+                    $kegiatan.prop('disabled', true);
+                    $kegiatan.append('<option value="">-- Pilih Program Dulu --</option>');
+                }
+                
+                // Trigger filter tabel
+                if(tableInstance) {
+                    tableInstance.draw();
+                }
+            });
+
+            $('#filter-kegiatan').on('change', function() {
+                if(tableInstance) {
+                    tableInstance.draw();
+                }
+            });
+
+            // B. LOGIKA FILTER LAINNYA
+            $('#customSearch').on('keyup', function() { 
+                if(tableInstance) {
+                    tableInstance.search(this.value).draw(); 
+                }
+            });
+            
+            $('#rangeFilter').on('input', function() { 
+                $('#rangeVal').text(this.value + '%'); 
+                if(tableInstance) {
+                    tableInstance.draw(); 
+                }
+            });
+            
+            $('#checkBig').on('change', function() { 
+                if(tableInstance) {
+                    tableInstance.draw(); 
+                }
+            });
+            
+            $('#resetBtn').click(() => {
+                $('#customSearch').val('').trigger('keyup');
+                $('#rangeFilter').val(0).trigger('input');
+                $('#checkBig').prop('checked', false).trigger('change');
+                
+                // Reset Dropdowns
+                $('#filter-program').val('').trigger('change');
+            });
+
+            // C. CUSTOM SEARCH EXTENSION DATATABLE
+            $.fn.dataTable.ext.search.push((settings, data, dataIndex) => {
+                const minPct = parseInt($('#rangeFilter').val()) || 0;
+                const bigOnly = $('#checkBig').is(':checked');
+                const pagu = parseFloat(data[1]) || 0;
+                const pct = parseFloat(data[4]) || 0;
+                const uraian = data[0];
+
+                // 1. Ambil nilai filter dropdown
+                const filterProg = $('#filter-program').val();
+                const filterKeg = $('#filter-kegiatan').val();
+
+                // 2. Cek Filter Program (WA/GG)
+                if (filterProg) {
+                    if (!uraian.includes(filterProg)) {
+                        return false;
+                    }
+                }
+
+                // 3. Cek Filter Kegiatan (Sub-Item)
+                if (filterKeg) {
+                    if (!uraian.includes(filterKeg)) {
+                        return false;
+                    }
+                }
+
+                // 4. Cek Filter Lama
+                if (pct < minPct) return false;
+                if (bigOnly && pagu < 100000000) return false; 
+                
+                return true;
+            });
+        }
+    </script>
+</body>
+</html>

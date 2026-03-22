@@ -1,0 +1,1026 @@
+<script>
+    
+    
+    function startApp() {
+        // Menunggu library eksternal siap sebelum memulai aplikasi
+        if (window.jQuery && window.Chart && $.fn.dataTable) {
+            mainApp();
+        } else {
+            setTimeout(startApp, 50); 
+        }
+    }
+    
+    function mainApp() {
+        // --- STATE MANAGER ---
+        const state = {
+            currentPage: 'Beranda',
+            loadedViews: new Set(), // Melacak view yang sudah di-render HTML-nya
+            masterData: {},         // Menyimpan data JSON per halaman
+            dataTable: null,        // Instance DataTable
+            charts: { sisaAnggaranChart: null, realisasiChart: null } // Instance Chart.js
+        };
+        
+        let loadRequestToken = 0;
+        const CACHE_DURATION = 5 * 60 * 1000; // 5 Menit durasi cache data background
+        const RISK_SHEET_NAME = "Data Risiko";
+        const KINERJA_SHEET_NAME = "Data Kinerja";
+        
+        // --- KONFIGURASI WARNA & DATA REFERENSI ---
+        const chartColors = {
+            accentBlue: '#3B82F6', accentSky: '#0EA5E9', accentViolet: '#8B5CF6',
+            accentAmber: '#F59E0B', accentGreen: '#10B981', text: '#6B7280',
+            grid: '#F3F4F6', tooltipBg: '#111827'
+        };
+    
+        // Data Referensi untuk Filter Dashboard (Cascading)
+        const programData = {
+            "WA": [
+                { id: "WA", text: "WA Program Dukungan Manajemen" }
+            ],
+            "GG": [
+                { id: "GG.2898", text: "GG.2898 Penyediaan dan Pengembangan Statistik Neraca Pengeluaran" },
+                { id: "GG.2899", text: "GG.2899 Penyediaan dan Pengembangan Statistik Neraca Produksi" },
+                { id: "GG.2896", text: "GG.2896 Penyediaan dan Pengembangan Statistik Sosial" },
+                { id: "GG.2897", text: "GG.2897 Penyediaan dan Pengembangan Statistik Produksi" },
+                { id: "GG.2900", text: "GG.2900 Penyediaan dan Pengembangan Statistik Distribusi dan Jasa" }
+            ]
+        };
+    
+        const DOM = {
+            mainContent: $('#main-content'),
+            sidebar: $('#sidebar'),
+            hamburgerBtn: $('#hamburger-btn'),
+            sidebarOverlay: $('#sidebar-overlay'),
+            notificationContainer: $('#notification-container')
+        };
+    
+        // --- UTILITY FUNCTIONS ---
+        function debounce(func, delay) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), delay);
+            };
+        }
+        
+        function formatRp(n) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n || 0);
+        }
+    
+        // Skeleton Loader (Tampilan Loading Sementara)
+        function getSkeleton(type) {
+            if(type === 'Dashboard') {
+                return `
+                <div class="p-6 animate-pulse space-y-6">
+                    <div class="h-10 bg-gray-300 rounded w-1/3"></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="h-32 bg-gray-200 rounded-xl"></div><div class="h-32 bg-gray-200 rounded-xl"></div>
+                        <div class="h-32 bg-gray-200 rounded-xl"></div><div class="h-32 bg-gray-200 rounded-xl"></div>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="lg:col-span-2 h-96 bg-gray-200 rounded-xl"></div>
+                        <div class="h-96 bg-gray-200 rounded-xl"></div>
+                    </div>
+                </div>`;
+            }
+            // Skeleton untuk Halaman Tim
+            return `
+            <div class="p-6 animate-pulse space-y-6">
+                <div class="h-40 bg-gray-200 rounded-xl"></div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="h-64 bg-gray-200 rounded-xl"></div>
+                    <div class="h-64 bg-gray-200 rounded-xl"></div>
+                    <div class="h-64 bg-gray-200 rounded-xl"></div>
+                </div>
+            </div>`;
+        }
+    
+        // =================================================================
+        // =========== 1. CORE NAVIGATION (SPA LOGIC) ======================
+        // =================================================================
+    
+        function loadPage(pageName) {
+            // 1. Update UI Sidebar Active State
+            $('.nav-link.active').removeClass('active');
+            $(`.nav-link[data-page="${pageName}"]`).addClass('active');
+    
+            // 2. Tentukan Container ID target
+            let targetViewId;
+            let isTeamPage = false;
+    
+            if (pageName === 'Beranda') {
+                targetViewId = 'view-Beranda';
+            } else if (pageName === 'Dashboard') {
+                targetViewId = 'view-Dashboard';
+            } else {
+                // Semua halaman tim menggunakan satu container yang sama (Reusability)
+                targetViewId = 'view-Team-Dynamic'; 
+                isTeamPage = true;
+            }
+    
+            // 3. Toggle Visibility (Menyembunyikan view lain tanpa menghapusnya dari DOM)
+            $('.view-section').addClass('hidden-view');
+            const $targetView = $(`#${targetViewId}`);
+            $targetView.removeClass('hidden-view');
+    
+            // Tutup sidebar otomatis di mobile
+            if (window.innerWidth < 1024) {
+                DOM.sidebar.addClass('-translate-x-full');
+                DOM.sidebarOverlay.fadeOut(200);
+            }
+    
+            state.currentPage = pageName;
+    
+            // 4. Logika Pemuatan Konten (Caching Strategy)
+    
+            // A. Logika Dashboard: Jika sudah ada, cukup refresh layout tabel & cek data baru
+            if (pageName === 'Dashboard' && state.loadedViews.has('Dashboard')) {
+                if (state.dataTable) {
+                    // Adjust kolom karena DataTables sering error layout saat hidden -> visible
+                    setTimeout(() => { state.dataTable.columns.adjust().draw(false); }, 50);
+                }
+                checkBackgroundDataUpdate(pageName);
+                return;
+            }
+    
+            // B. Logika Tim: Reuse Container
+            if (isTeamPage) {
+                if (!state.loadedViews.has('TeamStructure')) {
+                    // Load kerangka HTML Tim pertama kali (jika belum pernah buka tim manapun)
+                    $targetView.html(getSkeleton('Team'));
+                    fetchHTMLAndData(pageName, targetViewId, true); // true = team structure only
+                } else {
+                    // Jika kerangka sudah ada, update kontennya (Judul & Grid) secara manual
+                    if (state.masterData[pageName]) {
+                        updateTeamViewUI(pageName);
+                    } else {
+                        // Tampilkan loading di area grid saja
+                        $('#team-page-title').text(pageName.toUpperCase());
+                        $('#team-item-grid').html('<div class="col-span-full text-center py-12"><i class="fas fa-spinner fa-spin text-3xl text-blue-500 mb-3"></i><p class="text-gray-500">Mengambil data...</p></div>');
+                    }
+                    checkBackgroundDataUpdate(pageName);
+                }
+                return;
+            }
+    
+            // C. Logika Beranda: Selalu refresh statistik angka
+            if (pageName === 'Beranda' && state.loadedViews.has('Beranda')) {
+                loadHomeStats();
+                return;
+            }
+    
+            // D. First Time Load (View Kosong): Ambil HTML & Data dari Server
+            $targetView.html(getSkeleton(pageName));
+            fetchHTMLAndData(pageName, targetViewId, false);
+        }
+    
+        function fetchHTMLAndData(pageName, containerId, isTeamStructureOnly) {
+            loadRequestToken++;
+            const token = loadRequestToken;
+    
+            google.script.run
+                .withSuccessHandler(response => {
+                    if (loadRequestToken !== token) return; // Prevent race condition
+                    
+                    if (!response.success) {
+                        $(`#${containerId}`).html(`<div class="p-6 text-red-500 bg-red-50 rounded border border-red-200">Error: ${response.error}</div>`);
+                        return;
+                    }
+    
+                    // Render HTML ke Container
+                    if (response.html) {
+                        $(`#${containerId}`).html(response.html);
+                        
+                        if (isTeamStructureOnly) state.loadedViews.add('TeamStructure');
+                        else state.loadedViews.add(pageName);
+                    }
+    
+                    // Simpan Data ke Memory & LocalStorage Cache
+                    if (response.data) {
+                        localStorage.setItem(`app_cache_${pageName}`, JSON.stringify({
+                            data: response.data,
+                            timestamp: Date.now()
+                        }));
+                    }
+    
+                    // Inisialisasi Logic per Halaman setelah HTML Render
+                    if (pageName === 'Beranda') {
+                        loadHomeStats();
+                    }
+                    
+                    if (pageName === 'Dashboard') {
+                        const dashData = response.data?.budget?.allData || [];
+                        state.masterData.Dashboard = dashData;
+                        
+                        // Simpan data risiko & kinerja jika ada
+                        if(response.data?.risk) state.masterData.Risk = response.data.risk.data;
+                        if(response.data?.kinerja) state.masterData.Kinerja = response.data.kinerja.data;
+                        
+                        // Setup UI Dashboard
+                        initializeDashboard(dashData);
+                        initDashboardFilters(); // Setup Listener Filter
+                    }
+                    
+                    if (isTeamStructureOnly) {
+                         // Simpan data tim spesifik
+                         state.masterData[pageName] = response.data.data;
+                         updateTeamViewUI(pageName);
+                    }
+                })
+                .getPageContent(pageName, token);
+        }
+    
+        function checkBackgroundDataUpdate(pageName) {
+            const cacheKey = `app_cache_${pageName}`;
+            const cached = localStorage.getItem(cacheKey);
+            let shouldFetch = true;
+    
+            // Cek validitas cache client
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                // Jika data cache < 5 menit, tidak perlu fetch ulang
+                if (Date.now() - parsed.timestamp < CACHE_DURATION) {
+                    shouldFetch = false;
+                    
+                    // Sync memory dengan cache jika memory kosong (misal setelah refresh browser)
+                    if (pageName === 'Dashboard' && !state.masterData.Dashboard) {
+                         if(parsed.data.budget) {
+                             state.masterData.Dashboard = parsed.data.budget.allData;
+                             initializeDashboard(state.masterData.Dashboard);
+                         }
+                    } else if (pageName.toLowerCase().startsWith('tim') && !state.masterData[pageName]) {
+                         state.masterData[pageName] = parsed.data.data;
+                         updateTeamViewUI(pageName);
+                    }
+                }
+            }
+    
+            if (shouldFetch) {
+                // Fetch silent (User tidak melihat loading screen)
+                google.script.run.withSuccessHandler(res => {
+                     if(res.success && res.data) {
+                         // Update Cache
+                         localStorage.setItem(cacheKey, JSON.stringify({ data: res.data, timestamp: Date.now() }));
+                         
+                         // Update UI secara live jika user masih berada di halaman tersebut
+                         if(state.currentPage === pageName) {
+                             if (pageName === 'Dashboard') {
+                                 const newData = res.data.budget.allData;
+                                 state.masterData.Dashboard = newData;
+                                 updateDashboardDataAndUI(newData);
+                             } else if (pageName.toLowerCase().startsWith('tim')) {
+                                 state.masterData[pageName] = res.data.data;
+                                 updateTeamViewUI(pageName);
+                             }
+                         }
+                     }
+                }).getPageContent(pageName, 0);
+            }
+        }
+    
+        // =================================================================
+        // =========== 2. LOGIKA DASHBOARD (CHART, TABLE, FILTER) ==========
+        // =================================================================
+    
+        function initializeDashboard(data) {
+            if ($('#dataTable').length === 0) return;
+            
+            // Init DataTable HANYA SEKALI. Kita simpan instancenya di state.dataTable
+            if (!state.dataTable) {
+                 // Filter baris TOTAL
+                 const tableCleanData = data.filter(d => !String(d.uraian).toUpperCase().includes("JUMLAH SELURUHNYA"));
+                 
+                 state.dataTable = $('#dataTable').DataTable({
+                      data: tableCleanData,
+                      columns: [
+                        { data: 'uraian', title: 'Uraian', render: t => `<div class="truncate max-w-xs font-medium text-slate-700" title="${t}">${t}</div>` },
+                        { data: 'paguRevisi', title: 'Pagu', className: 'text-right font-mono text-xs', render: $.fn.dataTable.render.number('.', ',', 0, '') },
+                        { data: 'sdPeriode', title: 'Realisasi', className: 'text-right font-mono text-xs text-blue-600 font-bold', render: $.fn.dataTable.render.number('.', ',', 0, '') },
+                        { data: 'persenRealisasi', title: '%', className: 'text-center', render: v => {
+                             let c = v<0.5?'bg-red-100 text-red-700':(v<0.8?'bg-amber-100 text-amber-700':'bg-emerald-100 text-emerald-700');
+                             return `<span class="px-2 py-1 rounded text-xs font-bold ${c}">${((v||0)*100).toFixed(1)}%</span>`;
+                        }},
+                        { data: 'sisaAnggaran', title: 'Sisa', className: 'text-right font-mono text-xs text-slate-500', render: $.fn.dataTable.render.number('.', ',', 0, '') }
+                      ],
+                      dom: 'rt<"flex flex-col md:flex-row justify-between items-center pt-4 gap-4"ip>',
+                      pageLength: 5,
+                      responsive: true,
+                      destroy: true, 
+                      language: { 
+                          zeroRecords: "Data tidak ditemukan",
+                          info: "Hal _PAGE_ dari _PAGES_",
+                          paginate: { next: '<i class="fas fa-chevron-right"></i>', previous: '<i class="fas fa-chevron-left"></i>' }
+                      }
+                 });
+    
+                 // [PERBAIKAN UTAMA] Custom Search Function
+                 $.fn.dataTable.ext.search = []; 
+                 $.fn.dataTable.ext.search.push((settings, data, dataIndex) => {
+                    if (settings.nTable.id !== 'dataTable') return true;
+    
+                    const minPct = parseInt($('#rangeFilter').val()) || 0;
+                    const bigOnly = $('#checkBig').is(':checked');
+                    
+                    const api = new $.fn.dataTable.Api(settings);
+                    const rowData = api.row(dataIndex).data() || {};
+    
+                    const pagu = parseFloat(rowData.paguRevisi) || 0;
+                    const pct = (parseFloat(rowData.persenRealisasi) || 0) * 100;
+                    const uraianRaw = String(rowData.uraian || "");
+    
+                    const filterProg = $('#filter-program').val();
+                    const filterKeg = $('#filter-kegiatan').val();
+                    const filterAkun = $('#filter-akun').val();
+                    const filterKomp = $('#filter-komponen').val(); // [BARU] Filter Komponen
+    
+                    // 1. Cek Program
+                    if (filterProg) {
+                        if (filterProg === "WA") {
+                            if (!uraianRaw.toUpperCase().includes("WA")) return false;
+                        } else if (!uraianRaw.includes(filterProg)) {
+                            return false;
+                        }
+                    }
+                    
+                    // 2. Cek Kegiatan
+                    if (filterKeg) {
+                        if (!uraianRaw.includes(filterKeg)) return false;
+                    }
+    
+                    // 3. Cek Akun (6 Digit dimulai angka 5)
+                    if (filterAkun) {
+                        if (!uraianRaw.includes(filterAkun)) return false;
+                    }
+    
+                    // 4. [BARU] Cek Komponen (6 Digit dimulai angka 0)
+                    if (filterKomp) {
+                        if (!uraianRaw.includes(filterKomp)) return false;
+                    }
+                    
+                    // 5. Cek Slider & Checkbox
+                    if (pct < minPct) return false;
+                    if (bigOnly && pagu < 100000000) return false;
+    
+                    return true;
+                });
+    
+                // Event Listener untuk update Charts saat filter berubah
+                state.dataTable.on('draw', function () {
+                    const filteredData = state.dataTable.rows({ search: 'applied' }).data().toArray();
+                    updateVisualsOnly(filteredData);
+                });
+            }
+    
+            updateDashboardDataAndUI(data);
+        }
+    
+        function initDashboardFilters() {
+            // [FITUR BARU 1] Inject HTML Dropdown Akun secara dinamis jika belum ada
+            if ($('#filter-akun').length === 0) {
+                const akunHtml = `
+                <div class="mb-5">
+                    <label class="text-xs font-bold text-slate-400 uppercase block mb-2">Akun (5xxxxx)</label>
+                    <select id="filter-akun" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition cursor-pointer" disabled>
+                        <option value="">-- Pilih Kegiatan Dulu --</option>
+                    </select>
+                </div>`;
+                $('#filter-kegiatan').closest('.mb-5').after(akunHtml);
+            }
+    
+            // [FITUR BARU 2] Inject HTML Dropdown Komponen secara dinamis
+            if ($('#filter-komponen').length === 0) {
+                const kompHtml = `
+                <div class="mb-5">
+                    <label class="text-xs font-bold text-slate-400 uppercase block mb-2">Komponen (0xxxxx)</label>
+                    <select id="filter-komponen" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition cursor-pointer" disabled>
+                        <option value="">-- Pilih Akun Dulu --</option>
+                    </select>
+                </div>`;
+                $('#filter-akun').closest('.mb-5').after(kompHtml);
+            }
+    
+            // --- Filter Program ---
+            $(document).off('change', '#filter-program').on('change', '#filter-program', function() {
+                const prog = $(this).val();
+                const $kegiatan = $('#filter-kegiatan');
+                
+                // Reset Bawahnya
+                $kegiatan.empty();
+                $('#filter-akun').empty().prop('disabled', true).append('<option value="">-- Pilih Kegiatan Dulu --</option>');
+                $('#filter-komponen').empty().prop('disabled', true).append('<option value="">-- Pilih Akun Dulu --</option>');
+                
+                if (prog && programData[prog]) {
+                    $kegiatan.prop('disabled', false);
+                    $kegiatan.append('<option value="">Semua Kegiatan</option>');
+                    programData[prog].forEach(item => {
+                        $kegiatan.append(`<option value="${item.id}">${item.text}</option>`);
+                    });
+                } else {
+                    $kegiatan.prop('disabled', true);
+                    $kegiatan.append('<option value="">-- Pilih Program Dulu --</option>');
+                }
+                state.dataTable.draw();
+            });
+    
+            // --- Filter Kegiatan ---
+            $(document).off('change', '#filter-kegiatan').on('change', '#filter-kegiatan', function() {
+                const kegId = $(this).val();
+                const $akun = $('#filter-akun');
+                $akun.empty();
+                // Reset Komponen
+                $('#filter-komponen').empty().prop('disabled', true).append('<option value="">-- Pilih Akun Dulu --</option>');
+    
+                if (kegId) {
+                    $akun.prop('disabled', false);
+                    $akun.append('<option value="">Semua Akun</option>');
+    
+                    // Scan data untuk mencari Akun (5 digit)
+                    const uniqueAccounts = new Set();
+                    const accountsList = [];
+    
+                    state.masterData.Dashboard.forEach(row => {
+                        const uraian = String(row.uraian);
+                        const match = uraian.match(/\b(5\d{5})\b/);
+                        
+                        if (match) {
+                            const code = match[1];
+                            if (!uniqueAccounts.has(code)) {
+                                uniqueAccounts.add(code);
+                                let text = uraian;
+                                if (text.length > 50) text = text.substring(0, 50) + '...';
+                                accountsList.push({ code: code, text: text });
+                            }
+                        }
+                    });
+    
+                    accountsList.sort((a,b) => a.code - b.code).forEach(acc => {
+                        $akun.append(`<option value="${acc.code}">${acc.text}</option>`);
+                    });
+    
+                } else {
+                    $akun.prop('disabled', true);
+                    $akun.append('<option value="">-- Pilih Kegiatan Dulu --</option>');
+                }
+    
+                state.dataTable.draw();
+            });
+    
+            // --- Filter Akun (Trigger Populate Komponen) ---
+            $(document).off('change', '#filter-akun').on('change', '#filter-akun', function() {
+                const akunId = $(this).val();
+                const $komp = $('#filter-komponen');
+                $komp.empty();
+    
+                if (akunId) {
+                    $komp.prop('disabled', false);
+                    $komp.append('<option value="">Semua Komponen</option>');
+    
+                    // Scan data untuk mencari Komponen (0 digit)
+                    const uniqueComps = new Set();
+                    const compList = [];
+    
+                    state.masterData.Dashboard.forEach(row => {
+                        const uraian = String(row.uraian);
+                        
+                        // Regex: 6 digit diawali angka 0 (misal: 000651)
+                        const match = uraian.match(/\b(0\d{5})\b/);
+                        
+                        if (match) {
+                            const code = match[1];
+                            if (!uniqueComps.has(code)) {
+                                uniqueComps.add(code);
+                                let text = uraian;
+                                if (text.length > 50) text = text.substring(0, 50) + '...';
+                                compList.push({ code: code, text: text });
+                            }
+                        }
+                    });
+    
+                    compList.sort((a,b) => a.code - b.code).forEach(c => {
+                        $komp.append(`<option value="${c.code}">${c.text}</option>`);
+                    });
+                } else {
+                    $komp.prop('disabled', true);
+                    $komp.append('<option value="">-- Pilih Akun Dulu --</option>');
+                }
+    
+                state.dataTable.draw();
+            });
+    
+            // --- Filter Komponen ---
+            $(document).off('change', '#filter-komponen').on('change', '#filter-komponen', function() {
+                state.dataTable.draw();
+            });
+    
+            // Filter Lainnya
+            $(document).off('keyup', '#customSearch').on('keyup', '#customSearch', function() { state.dataTable.search(this.value).draw(); });
+            $(document).off('input', '#rangeFilter').on('input', '#rangeFilter', function() { $('#rangeVal').text(this.value + '%'); state.dataTable.draw(); });
+            $(document).off('change', '#checkBig').on('change', '#checkBig', function() { state.dataTable.draw(); });
+            
+            // Reset Filter
+            $(document).off('click', '#resetBtn').on('click', '#resetBtn', () => {
+                $('#customSearch').val('').trigger('keyup');
+                $('#rangeFilter').val(0).trigger('input');
+                $('#checkBig').prop('checked', false).trigger('change');
+                $('#filter-program').val('').trigger('change');
+                // Reset dropdowns
+                $('#filter-akun').empty().prop('disabled', true).append('<option value="">-- Pilih Kegiatan Dulu --</option>');
+                $('#filter-komponen').empty().prop('disabled', true).append('<option value="">-- Pilih Akun Dulu --</option>');
+            });
+        }
+    
+        // Fungsi untuk Update Data Tabel (Dipanggil saat data baru dari server)
+        function updateDashboardDataAndUI(data) {
+            if (state.dataTable) {
+                const cleanData = data.filter(d => !String(d.uraian).toUpperCase().includes("JUMLAH SELURUHNYA"));
+                state.dataTable.clear();
+                state.dataTable.rows.add(cleanData);
+                state.dataTable.draw(); // Ini akan memicu event 'draw' -> updateVisualsOnly
+            } else {
+                // Fallback jika tabel belum siap
+                updateVisualsOnly(data);
+            }
+        }
+    
+        // [PENTING] Fungsi Terpisah untuk Memperbarui Visual (Chart & KPI)
+        // dengan LOGIKA SMART SUM untuk menghindari Double Counting
+        function updateVisualsOnly(data) {
+            // --- 1. Logika Smart Summing (Hierarkis) ---
+            
+            // Deteksi Baris Program (Level Tertinggi)
+            const programRows = data.filter(d => {
+                const u = String(d.uraian || "").toUpperCase();
+                return u.includes("PROGRAM") && (u.includes("WA") || u.includes("GG"));
+            });
+    
+            // Deteksi Baris Kegiatan (Level Menengah - 4 Digit)
+            const activityRows = data.filter(d => {
+                const u = String(d.uraian || "");
+                return /^[\[]?\d{4}[\]]?[\.\s]/.test(u) && !u.toUpperCase().includes("PROGRAM");
+            });
+    
+            // Deteksi Baris Akun (5 Digit start 5)
+            const accountRows = data.filter(d => /\b5\d{5}\b/.test(String(d.uraian || "")));
+    
+            // [BARU] Deteksi Baris Komponen (6 Digit start 0)
+            const componentRows = data.filter(d => /\b0\d{5}\b/.test(String(d.uraian || "")));
+    
+            let sumData = data; 
+    
+            // Logika Prioritas Penjumlahan:
+            // Prioritas 1: Jika ada Program Header (dan bukan filter spesifik bawahnya), pakai Program Header.
+            if (programRows.length > 0) {
+                sumData = programRows;
+            } 
+            // Prioritas 2: Jika Program hilang, pakai Kegiatan.
+            else if (activityRows.length > 0) {
+                sumData = activityRows;
+            }
+            // Prioritas 3: Jika Kegiatan hilang, pakai Akun.
+            else if (accountRows.length > 0) {
+                sumData = accountRows;
+            }
+            // Prioritas 4: Jika Akun hilang, pakai Komponen (Level terendah).
+            // Ini memastikan jika user memfilter Komponen, kita tidak menghitung ganda.
+            else if (componentRows.length > 0) {
+                sumData = componentRows;
+            }
+            
+            // Hitung Total
+            const totalPagu = sumData.reduce((a, b) => a + (b.paguRevisi || 0), 0); 
+            const totalRealisasi = sumData.reduce((a, b) => a + (b.sdPeriode || 0), 0);
+            
+            // [FIX] Tampilkan angka penuh tanpa pembulatan (menggunakan formatRp)
+            $('#totalPagu').text(formatRp(totalPagu));
+            $('#totalRealisasi').text(formatRp(totalRealisasi));
+            $('#sisaAnggaran').text(formatRp(totalPagu - totalRealisasi));
+            
+            const capaian = totalPagu > 0 ? (totalRealisasi / totalPagu * 100) : 0;
+            $('#persentaseCapaian').text(capaian.toFixed(2) + '%');
+            $('#capaianBar').css('width', Math.min(capaian, 100) + '%');
+    
+            // --- 2. Update Charts ---
+            
+            let chartData = data;
+            
+            if (data.length > 5) {
+                 // Filter untuk chart agar bersih
+                 if (componentRows.length > 0) {
+                     chartData = componentRows;
+                 } else if (accountRows.length > 0) {
+                     chartData = accountRows;
+                 } else if (activityRows.length > 0) {
+                     chartData = activityRows;
+                 }
+            }
+    
+            const top10Real = [...chartData].sort((a,b)=>b.sdPeriode - a.sdPeriode).slice(0,10);
+            const top10Sisa = [...chartData].sort((a,b)=>(b.paguRevisi - b.sdPeriode) - (a.paguRevisi - a.sdPeriode)).slice(0,10);
+    
+            updateChart('realisasiChart', 'chartTopReal', {
+                labels: top10Real.map(i => String(i.uraian).replace(/^\[.*?\]/, '').substring(0, 35) + '...'),
+                data: top10Real.map(i => i.sdPeriode),
+                color: chartColors.accentGreen,
+                label: 'Realisasi'
+            });
+    
+            updateChart('sisaAnggaranChart', 'chartTopSisa', {
+                labels: top10Sisa.map(i => String(i.uraian).replace(/^\[.*?\]/, '').substring(0, 35) + '...'),
+                data: top10Sisa.map(i => (i.paguRevisi - i.sdPeriode)),
+                color: chartColors.accentAmber,
+                label: 'Sisa Anggaran'
+            });
+        }
+    
+        function updateChart(key, canvasId, {labels, data, color, label}) {
+            const ctx = document.getElementById(canvasId);
+            if(!ctx) return;
+            
+            if(state.charts[key]) {
+                state.charts[key].data.labels = labels;
+                state.charts[key].data.datasets[0].data = data;
+                state.charts[key].update();
+            } else {
+                state.charts[key] = new Chart(ctx, {
+                    type: 'bar',
+                    data: { labels: labels, datasets: [{ label: label, data: data, backgroundColor: color, borderRadius: 4 }] },
+                    options: { 
+                        indexAxis: 'y', 
+                        responsive: true, 
+                        maintainAspectRatio: false, 
+                        plugins:{legend:{display:false}},
+                        scales: { 
+                            x: { ticks: { callback: v => (v/1000000).toFixed(0) + 'Jt' }, grid: {display:false} },
+                            y: { ticks: { autoSkip: false, font:{size:10} } }
+                        }
+                    }
+                });
+            }
+        }
+    
+        // =================================================================
+        // =========== 3. LOGIKA TIM (GRID & CARD REUSE) ===================
+        // =================================================================
+    
+        function updateTeamViewUI(teamName) {
+            $('#team-page-title').text(teamName.toUpperCase());
+            
+            const data = state.masterData[teamName];
+            const grid = $('#team-item-grid');
+            grid.empty();
+    
+            if (!data || data.length === 0) {
+                grid.html(`
+                <div class="col-span-full flex flex-col items-center justify-center p-12 bg-white rounded-xl border-2 border-dashed border-gray-300 text-gray-400">
+                    <i class="fas fa-folder-open text-6xl mb-4 text-blue-200"></i>
+                    <p class="font-medium text-lg">Belum ada kegiatan.</p>
+                    <p class="text-sm">Klik tombol "Tambah Kegiatan" di atas.</p>
+                </div>`);
+                return;
+            }
+    
+            const cardsHtml = data.map((row, index) => {
+                 const [id, judul, ketua, deskripsi, rawLink, rowIndex] = row;
+                 
+                 // Parsing Link JSON (Format: {"2025":"url", "2024":"url"})
+                 let linkData = {}, defaultLink = "#";
+                 try { 
+                     linkData = JSON.parse(rawLink); 
+                     const years = Object.keys(linkData).sort((a,b)=>b-a); 
+                     if(years.length>0) defaultLink=linkData[years[0]]; 
+                 } catch(e) { 
+                     // Fallback format link lama (string biasa)
+                     defaultLink = rawLink; 
+                     if(rawLink && rawLink!=='#') linkData={'2025':rawLink}; 
+                 }
+                 
+                 // Build Dropdown Link Tahun
+                 let optionsHtml = '';
+                 Object.keys(linkData).sort((a,b)=>b-a).forEach(y => optionsHtml+=`<option value="${linkData[y]}">${y}</option>`);
+                 
+                 const dropdownHtml = optionsHtml 
+                    ? `<div class="relative w-full">
+                        <select class="year-selector w-full appearance-none bg-white border border-gray-300 text-gray-700 text-sm rounded-md py-2 px-3 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer" data-card-id="${id}">
+                            ${optionsHtml}
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500"><i class="fas fa-chevron-down fa-xs"></i></div>
+                       </div>` 
+                    : `<div class="text-sm text-gray-400 italic border p-2 rounded bg-gray-50 text-center">Link Kosong</div>`;
+    
+                 const isLinkDisabled = (!defaultLink || defaultLink === '#' || defaultLink === 'undefined');
+    
+                 return `
+                <div class="bg-white rounded-xl shadow-sm hover:shadow-lg border border-gray-200 transition-all flex flex-col h-full group animated-item" style="animation-delay: ${index * 30}ms">
+                    <div class="bg-[#3b82f6] p-4 border-b border-blue-600 rounded-t-xl">
+                        <h3 class="text-lg font-bold text-white line-clamp-2" title="${judul}">${judul}</h3>
+                    </div>
+                    <div class="p-5 flex-grow space-y-4">
+                        <div>
+                            <label class="text-xs font-semibold text-gray-500 uppercase">Ketua:</label>
+                            <div class="bg-gray-100 text-gray-800 text-sm font-medium px-3 py-2 rounded border border-gray-200">${ketua||'-'}</div>
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-gray-500 uppercase">Deskripsi:</label>
+                            <div class="bg-gray-100 text-gray-600 text-sm px-3 py-2 rounded border border-gray-200 min-h-[3.5rem] line-clamp-3">${deskripsi||'-'}</div>
+                        </div>
+                        <div class="pt-2">
+                            <label class="text-xs font-semibold text-gray-500 uppercase mb-1 block">Tahun Data:</label>
+                            ${dropdownHtml}
+                        </div>
+                    </div>
+                    <div class="px-5 py-4 bg-white border-t border-gray-100 flex gap-3 rounded-b-xl">
+                        <a href="${defaultLink}" target="_blank" id="btn-link-${id}" class="flex-1 bg-[#1e3a8a] hover:bg-[#172554] text-white font-bold py-2 px-4 rounded text-center text-sm transition shadow-sm flex items-center justify-center gap-2 ${isLinkDisabled ? 'opacity-50 pointer-events-none' : ''}">
+                            <i class="fas fa-external-link-alt"></i> Buka
+                        </a>
+                        <button class="bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-100 rounded p-2 transition btn-edit" data-id="${id}"><i class="fas fa-pencil-alt"></i></button>
+                        <button class="bg-red-50 text-red-500 hover:bg-red-100 border border-red-100 rounded p-2 transition btn-delete" data-id="${id}"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                </div>`;
+            }).join('');
+            
+            grid.html(cardsHtml);
+        }
+    
+        // =================================================================
+        // =========== 4. EVENT LISTENERS (INTERAKSI & CRUD) ===============
+        // =================================================================
+        
+        function initializeEventListeners() {
+            // --- Navigation ---
+            $(document).on('click', '.nav-link', function(e) { 
+                e.preventDefault(); 
+                const page = $(this).data('page');
+                if(page) loadPage(page);
+            });
+    
+            // --- Sidebar Toggles ---
+            $('#desktop-sidebar-toggle').on('click', function() {
+                 $('#sidebar').toggleClass('lg:w-72 lg:w-0');
+                 // Resize chart saat sidebar berubah agar responsif
+                 setTimeout(() => { Object.values(state.charts).forEach(c => c && c.resize()); }, 300);
+            });
+            
+            $('#hamburger-btn').on('click', () => { $('#sidebar').toggleClass('-translate-x-full'); $('#sidebar-overlay').fadeToggle(200); });
+            $('#sidebar-overlay').on('click', () => { $('#sidebar').addClass('-translate-x-full'); $('#sidebar-overlay').fadeOut(200); });
+            $(document).on('click', '.modal-close-btn, .modal-cancel-btn', () => $('.modal-container.is-active').removeClass('is-active'));
+    
+            // --- CRUD TIM (Tambah/Hapus Tim) ---
+            $(document).on('click', '#add-new-team-btn', () => { $('#add-team-form')[0].reset(); $('#add-team-modal').addClass('is-active'); });
+            $(document).on('submit', '#add-team-form', function(e) { 
+                e.preventDefault(); 
+                const teamName = $('#new-team-name').val().trim();
+                if (!teamName) { showNotification('Nama tim kosong.', false); return; }
+                
+                const $btn = $('#create-team-btn'); 
+                setButtonLoadingState($btn, true, 'Membuat...');
+                
+                google.script.run.withSuccessHandler(res => {
+                    setButtonLoadingState($btn, false); 
+                    showNotification(res.message, res.success);
+                    if (res.success) { $('#add-team-modal').removeClass('is-active'); populateTeamSidebar(); }
+                }).withFailureHandler(err => { setButtonLoadingState($btn, false); showErrorNotification(err); }).createNewTeamSheet(teamName);
+            });
+            
+            $(document).on('click', '#delete-team-btn', () => { $('#delete-team-form')[0].reset(); $('#delete-team-modal').addClass('is-active'); });
+            $(document).on('submit', '#delete-team-form', function(e) {
+                 e.preventDefault();
+                 const teamName = $('#delete-team-name').val().trim();
+                 const $btn = $('#confirm-delete-team-btn');
+                 setButtonLoadingState($btn, true, 'Menghapus...');
+                 google.script.run.withSuccessHandler(res => {
+                      setButtonLoadingState($btn, false);
+                      showNotification(res.message, res.success);
+                      if(res.success) {
+                          $('#delete-team-modal').removeClass('is-active');
+                          populateTeamSidebar();
+                          if(state.currentPage === teamName) loadPage('Beranda');
+                      }
+                 }).withFailureHandler(err => { setButtonLoadingState($btn, false); showErrorNotification(err); }).deleteTeamSheet(teamName);
+            });
+    
+            // --- CRUD ITEM KEGIATAN (ADD/EDIT/DELETE) ---
+            $(document).on('click', '#add-team-item-btn', () => {
+                 $('#item-form')[0].reset(); $('#link-container').empty(); $('#item-id').val(''); $('#item-row-index').val('');
+                 $('#item-modal-title').text('Tambah Kegiatan Baru');
+                 populateLeaderDropdown();
+                 $('#link-container').append(createLinkRow('2025', '')); // Default row
+                 $('#item-modal').addClass('is-active');
+            });
+            
+            $(document).on('click', '.btn-edit', function() {
+                 const id = $(this).data('id');
+                 const item = (state.masterData[state.currentPage] || []).find(row => row[0] === id);
+                 if(item) {
+                     const [id, judul, ketua, deskripsi, rawLink, rowIndex] = item;
+                     $('#item-id').val(id); $('#item-row-index').val(rowIndex);
+                     $('#item-judul').val(judul); $('#item-deskripsi').val(deskripsi);
+                     $('#item-modal-title').text('Edit Kegiatan');
+                     populateLeaderDropdown(ketua);
+                     
+                     // Populate Links
+                     $('#link-container').empty();
+                     let linkData = {};
+                     try { linkData = JSON.parse(rawLink); } catch(e) { if(rawLink && rawLink!=='#') linkData={'2025':rawLink}; }
+                     
+                     const years = Object.keys(linkData);
+                     if(years.length > 0) {
+                         years.forEach(y => $('#link-container').append(createLinkRow(y, linkData[y])));
+                     } else {
+                         $('#link-container').append(createLinkRow('2025', ''));
+                     }
+                     $('#item-modal').addClass('is-active');
+                 }
+            });
+    
+            $(document).on('submit', '#item-form', function(e) {
+                e.preventDefault();
+                const $btn = $('#save-item-btn'); setButtonLoadingState($btn, true);
+                
+                let linkObject = {};
+                $('.link-row').each(function() {
+                    const year = $(this).find('.input-year').val().trim();
+                    const url = $(this).find('.input-url').val().trim();
+                    if(year && url) linkObject[year] = url;
+                });
+                
+                const data = { 
+                    sheetName: state.currentPage, id: $('#item-id').val(), rowIndex: $('#item-row-index').val(),
+                    judul: $('#item-judul').val(), ketua: $('#item-ketua').val(), deskripsi: $('#item-deskripsi').val(),
+                    link: JSON.stringify(linkObject)
+                };
+                
+                google.script.run.withSuccessHandler(res => {
+                    setButtonLoadingState($btn, false);
+                    showNotification(res.message, res.success);
+                    if (res.success) { 
+                        $('.modal-container.is-active').removeClass('is-active'); 
+                        invalidateCacheAndReload(state.currentPage); 
+                    }
+                }).withFailureHandler(err => { setButtonLoadingState($btn, false); showErrorNotification(err); }).saveItem(data);
+            });
+    
+            // --- DELETE ITEM (Kegiatan/Risiko/dll) ---
+            $(document).on('click', '.btn-delete', function() {
+                const id = $(this).data('id');
+                $('#confirm-delete-btn').data('id-to-delete', id).data('sheet-name', state.currentPage); 
+                $('#confirm-modal').addClass('is-active');
+            });
+            
+            $(document).on('click', '#confirm-delete-btn', function() {
+                 const $btn = $(this); const id = $btn.data('id-to-delete'); const sheetName = $btn.data('sheet-name');
+                 setButtonLoadingState($btn, true, 'Menghapus...');
+                 
+                 google.script.run.withSuccessHandler(res => {
+                     setButtonLoadingState($btn, false); 
+                     showNotification(res.message, res.success);
+                     if (res.success) { 
+                         $('.modal-container.is-active').removeClass('is-active'); 
+                         invalidateCacheAndReload(sheetName); 
+                     }
+                 }).withFailureHandler(err => { setButtonLoadingState($btn, false); showErrorNotification(err); }).deleteItem({ id: id, sheetName: sheetName });
+            });
+    
+            // --- Search Tim (Client Side) ---
+            $(document).on('input', '#team-search-input', debounce(function() {
+                 const term = $(this).val().toLowerCase();
+                 $('#team-item-grid .animated-item').each(function() {
+                     const title = $(this).find('h3').text().toLowerCase();
+                     const ketua = $(this).find('.bg-gray-100').first().text().toLowerCase(); // Text ketua
+                     const visible = title.includes(term) || ketua.includes(term);
+                     $(this).toggle(visible);
+                 });
+            }, 300));
+    
+            // --- Helper UI Listeners (Link Row, Leader Dropdown) ---
+            $(document).on('click', '#add-year-link-btn', function() { $('#link-container').append(createLinkRow('2025', '')); });
+            $(document).on('click', '.btn-remove-row', function() { $(this).closest('.link-row').remove(); });
+            $(document).on('change', '.year-selector', function() {
+                 const selectedUrl = $(this).val();
+                 $(`#btn-link-${$(this).data('card-id')}`).attr('href', selectedUrl).toggleClass('opacity-50 pointer-events-none', !selectedUrl || selectedUrl === 'undefined');
+            });
+            
+            // --- Manage Leaders (Kelola Daftar Ketua) ---
+            $(document).on('click', '#btn-manage-leaders', function() { $('#new-leader-name').val(''); $('#manage-leader-modal').addClass('is-active'); renderManageLeaderList(); });
+            
+            $(document).on('click', '#add-leader-btn', function() {
+                const name = $('#new-leader-name').val().trim();
+                if(!name) return;
+                const $btn=$(this); $btn.prop('disabled',true).html('<i class="fas fa-spinner fa-spin"></i>');
+                google.script.run.withSuccessHandler(res=>{
+                    $btn.prop('disabled',false).html('<i class="fas fa-plus"></i>');
+                    if(res.success) { $('#new-leader-name').val(''); renderManageLeaderList(); }
+                    else showNotification(res.message, false);
+                }).addLeaderName(name);
+            });
+            
+            $(document).on('click', '.btn-delete-leader', function() {
+                const name = $(this).data('name');
+                if(!confirm('Hapus '+name+'?')) return;
+                $(this).closest('div').css('opacity',0.5);
+                google.script.run.withSuccessHandler(res=>{
+                    if(res.success) renderManageLeaderList();
+                    else showNotification(res.message, false);
+                }).deleteLeaderName(name);
+            });
+            
+            $(document).on('click', '.modal-cancel-leader-btn', function() { 
+                $('#manage-leader-modal').removeClass('is-active'); 
+                populateLeaderDropdown($('#item-ketua').val());
+            });
+        }
+    
+        // =================================================================
+        // =========== 5. HELPER LAINNYA ===================================
+        // =================================================================
+        
+        function showNotification(message, isSuccess = true) {
+            const typeClass = isSuccess ? 'bg-green-500' : 'bg-red-500';
+            const icon = isSuccess ? 'fa-check-circle' : 'fa-exclamation-triangle';
+            const notification = $(`<div class="notification ${typeClass}"><i class="fas ${icon} mr-3"></i>${message}</div>`);
+            DOM.notificationContainer.append(notification);
+            setTimeout(() => notification.remove(), 4000);
+        }
+        
+        function showErrorNotification(err) { showNotification(err.message || 'Terjadi kesalahan.', false); }
+        
+        function setButtonLoadingState($button, isLoading, loadingText = 'Menyimpan...') {
+            const originalHtml = $button.data('original-html');
+            if (isLoading) {
+                if (!originalHtml) $button.data('original-html', $button.html());
+                $button.html(`<i class="fas fa-spinner fa-spin mr-2"></i>${loadingText}`).prop('disabled', true);
+            } else {
+                if (originalHtml) $button.html(originalHtml).removeData('original-html');
+                $button.prop('disabled', false);
+            }
+        }
+    
+        function invalidateCacheAndReload(pageName) {
+            // Hapus cache lokal & trigger background update (Tanpa reload full page)
+            localStorage.removeItem(`app_cache_${pageName}`);
+            checkBackgroundDataUpdate(pageName);
+        }
+    
+        function createLinkRow(year = '', url = '') {
+            return `<div class="flex gap-2 items-center link-row mb-2 animated-item"><input type="number" class="form-input w-1/4 input-year" placeholder="Tahun" value="${year}"><input type="text" class="form-input w-3/4 input-url" placeholder="https://..." value="${url}"><button type="button" class="text-red-500 hover:text-red-700 btn-remove-row p-2"><i class="fas fa-times"></i></button></div>`;
+        }
+        
+        function populateLeaderDropdown(selectedName = null) {
+            const $select = $('#item-ketua');
+            google.script.run.withSuccessHandler(leaders => {
+                $select.empty().append('<option value="" disabled selected>Pilih Ketua Tim...</option>');
+                if(leaders) leaders.forEach(n => $select.append(`<option value="${n}" ${selectedName===n?'selected':''}>${n}</option>`));
+                if(selectedName && (!leaders || !leaders.includes(selectedName))) $select.append(`<option value="${selectedName}" selected>${selectedName} (Lama)</option>`);
+            }).getLeaderList();
+        }
+        
+        function renderManageLeaderList() {
+            const $cont = $('#leader-list-container');
+            $cont.html('<div class="text-center py-2 text-gray-400">Memuat...</div>');
+            google.script.run.withSuccessHandler(leaders => {
+                $cont.empty();
+                if(leaders && leaders.length>0) {
+                    leaders.forEach(n => $cont.append(`
+                        <div class="flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-100 hover:bg-gray-100 transition">
+                            <span class="text-sm text-gray-700">${n}</span>
+                            <button class="text-red-500 hover:text-red-700 btn-delete-leader" data-name="${n}"><i class="fas fa-trash-alt"></i></button>
+                        </div>`));
+                } else $cont.html('<div class="text-center text-sm text-gray-400">List kosong.</div>');
+            }).getLeaderList();
+        }
+    
+        function loadHomeStats() {
+            google.script.run.withSuccessHandler(stats => {
+                if(!stats) return;
+                 $('#home-stat-tim').text(stats.teamCount);
+                 $('#home-stat-activity').text(stats.activityCount);
+                 $('#home-stat-risk').text(stats.riskCount);
+            }).getHomePageStats();
+        }
+        
+        function populateTeamSidebar() {
+            google.script.run.withSuccessHandler(res => {
+                 const $list = $('#dynamic-team-list');
+                 if(res.success && res.data.length > 0) {
+                     $list.empty();
+                     res.data.forEach(t => {
+                         $list.append(`<a href="#" class="nav-link flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-300 hover:bg-gray-800 hover:text-white transition-colors group" data-page="${t}"><i class="fas fa-users w-6 text-center text-gray-400 group-hover:text-white"></i><span class="ml-2 truncate">${t}</span></a>`);
+                     });
+                 } else { $list.html('<p class="px-3 text-xs italic text-gray-500">Belum ada tim.</p>'); }
+            }).getTeamList();
+        }
+    
+        // --- STARTUP APLIKASI ---
+        initializeEventListeners();
+        populateTeamSidebar();
+        
+        // Inisialisasi Tanggal Header
+        const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        $('#header-date-display').text(new Date().toLocaleDateString('id-ID', opts));
+        
+        // Load Halaman Awal
+        loadPage('Beranda');
+    }
+    
+    // Event Listener Utama
+    document.addEventListener('DOMContentLoaded', startApp);
+    </script>

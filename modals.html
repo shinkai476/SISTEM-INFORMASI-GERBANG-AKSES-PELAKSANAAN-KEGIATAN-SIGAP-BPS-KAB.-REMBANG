@@ -1,0 +1,285 @@
+<div id="notification-container" class="fixed top-5 right-5 z-[101] w-full max-w-sm space-y-3"></div>
+
+<div id="add-team-modal" class="modal-container">
+  <div class="modal-box max-w-md">
+    <header class="modal-header">
+      <h2 class="text-lg font-bold">Tambah Tim Baru</h2>
+      <button type="button" class="modal-close-btn modal-cancel-btn">&times;</button>
+    </header>
+    <form id="add-team-form">
+      <main class="modal-body">
+        <div class="form-group">
+          <label for="new-team-name">Nama Tim</label>
+          <input type="text" id="new-team-name" class="form-input" placeholder="Contoh: Pengelolaan Data" required>
+          <p class="text-xs text-gray-500 mt-1">Nama tim akan otomatis diawali dengan "Tim "</p>
+        </div>
+      </main>
+      <footer class="modal-footer">
+        <button type="button" class="btn btn-secondary modal-cancel-btn">Batal</button>
+        <button type="submit" id="create-team-btn" class="btn btn-primary">Buat Tim</button>
+      </footer>
+    </form>
+  </div>
+</div>
+
+<div id="delete-team-modal" class="modal-container">
+  <div class="modal-box max-w-md">
+    <header class="modal-header">
+      <h2 class="text-lg font-bold">Hapus Tim</h2>
+      <button type="button" class="modal-close-btn modal-cancel-btn">&times;</button>
+    </header>
+    <form id="delete-team-form">
+      <main class="modal-body">
+        <div class="form-group">
+          <label for="delete-team-name">Nama Tim</label>
+          <input type="text" id="delete-team-name" class="form-input" placeholder="Contoh: Tim IPDS" required>
+          <p class="text-xs text-gray-500 mt-1">Masukkan nama tim lengkap sesuai yang tertera di sidebar.</p>
+        </div>
+      </main>
+      <footer class="modal-footer">
+        <button type="button" class="btn btn-secondary modal-cancel-btn">Batal</button>
+        <button type="submit" id="confirm-delete-team-btn" class="btn btn-danger">Ya, Hapus Tim</button>
+      </footer>
+    </form>
+  </div>
+</div>
+
+<div id="item-modal" class="modal-container">
+    <div class="modal-box">
+        <header class="modal-header">
+            <h2 id="item-modal-title" class="text-lg font-bold">Tambah Kegiatan Baru</h2>
+            <button type="button" class="modal-close-btn modal-cancel-btn" aria-label="Tutup modal">&times;</button>
+        </header>
+        <form id="item-form" autocomplete="off">
+            <main class="modal-body">
+                <input type="hidden" id="item-id">
+                <input type="hidden" id="item-row-index">
+                
+                <div class="form-group">
+                    <label for="item-judul">Judul Kegiatan</label>
+                    <input type="text" id="item-judul" class="form-input" placeholder="Masukkan judul kegiatan..." required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="item-ketua">Ketua Tim</label>
+                    <div class="flex gap-2">
+                        <div class="relative w-full">
+                            <select id="item-ketua" class="form-input appearance-none bg-white" required>
+                                <option value="" disabled selected>Pilih Ketua Tim...</option>
+                                </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                                <i class="fas fa-chevron-down fa-xs"></i>
+                            </div>
+                        </div>
+                        <button type="button" id="btn-manage-leaders" class="btn btn-secondary px-3" title="Kelola Daftar Ketua">
+                            <i class="fas fa-cog"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="item-deskripsi">Deskripsi Singkat</label>
+                    <textarea id="item-deskripsi" class="form-textarea" rows="3" placeholder="Jelaskan kegiatan secara singkat..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="block mb-2 font-medium">Link Folder/Dokumen per Tahun</label>
+                    
+                    <div id="link-container" class="space-y-3 mb-3">
+                        </div>
+
+                    <button type="button" id="add-year-link-btn" class="text-sm text-blue-600 hover:text-blue-800 font-semibold flex items-center mt-2">
+                        <i class="fas fa-plus-circle mr-1"></i> Tambah Tahun Lain
+                    </button>
+                </div>
+            </main>
+            <footer class="modal-footer">
+                <button type="button" class="btn btn-secondary modal-cancel-btn">Batal</button>
+                <button type="submit" id="save-item-btn" class="btn btn-primary">Simpan</button>
+            </footer>
+        </form>
+    </div>
+</div>
+
+<div id="risk-modal" class="modal-container">
+    <div class="modal-box">
+        <header class="modal-header">
+            <h2 id="risk-modal-title" class="text-lg font-bold">Tambah Risiko Baru</h2>
+            <button type="button" class="modal-close-btn modal-cancel-btn" aria-label="Tutup modal">&times;</button>
+        </header>
+        <form id="risk-form" autocomplete="off">
+            <main class="modal-body">
+                <input type="hidden" id="risk-id">
+                <input type="hidden" id="risk-row-index">
+                <div class="form-group">
+                    <label for="risk-judul">Risiko Aktual</label>
+                    <input type="text" id="risk-judul" class="form-input" placeholder="Masukkan risiko..." required>
+                </div>
+                <div class="form-group">
+                    <label for="risk-level">Level Risiko</label>
+                    <input type="text" id="risk-level" class="form-input" placeholder="Tinggi/Sedang/Rendah...">
+                </div>
+                <div class="form-group">
+                    <label for="risk-deskripsi">Keterangan/Mitigasi</label>
+                    <textarea id="risk-deskripsi" class="form-textarea" rows="3" placeholder="Jelaskan keterangan..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="risk-link">Link Dokumen</label>
+                    <input type="url" id="risk-link" class="form-input" placeholder="https://docs.google.com/...">
+                </div>
+            </main>
+            <footer class="modal-footer">
+                <button type="button" class="btn btn-secondary modal-cancel-btn">Batal</button>
+                <button type="submit" id="save-risk-btn" class="btn btn-primary">Simpan</button>
+            </footer>
+        </form>
+    </div>
+</div>
+
+<div id="kinerja-modal" class="modal-container">
+    <div class="modal-box">
+        <header class="modal-header">
+            <h2 id="kinerja-modal-title" class="text-lg font-bold">Tambah Indikator Kinerja</h2>
+            <button type="button" class="modal-close-btn modal-cancel-btn" aria-label="Tutup modal">&times;</button>
+        </header>
+        <form id="kinerja-form" autocomplete="off">
+            <main class="modal-body">
+                <input type="hidden" id="kinerja-id">
+                <input type="hidden" id="kinerja-row-index">
+        
+                <div class="form-group">
+                    <label for="kinerja-judul">Indikator</label>
+                    <input type="text" id="kinerja-judul" class="form-input" placeholder="Masukkan indikator..." required>
+                </div>
+                
+                <label class="form-group-label mb-2 block font-medium">Realisasi Triwulanan</label>
+                <div class="grid grid-cols-4 gap-4 mb-4">
+                    <div class="form-group mb-0">
+                        <label for="kinerja-tw1" class="text-xs">Tw1</label>
+                        <input type="text" id="kinerja-tw1" class="form-input" placeholder="0">
+                    </div>
+                    <div class="form-group mb-0">
+                        <label for="kinerja-tw2" class="text-xs">Tw2</label>
+                        <input type="text" id="kinerja-tw2" class="form-input" placeholder="0">
+                    </div>
+                    <div class="form-group mb-0">
+                        <label for="kinerja-tw3" class="text-xs">Tw3</label>
+                        <input type="text" id="kinerja-tw3" class="form-input" placeholder="0">
+                    </div>
+                    <div class="form-group mb-0">
+                        <label for="kinerja-tw4" class="text-xs">Tw4</label>
+                        <input type="text" id="kinerja-tw4" class="form-input" placeholder="0">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="form-group">
+                        <label for="kinerja-target">Target (Tahunan)</label>
+                        <input type="text" id="kinerja-target" class="form-input" placeholder="Contoh: 100%">
+                    </div>
+                    <div class="form-group">
+                        <label for="kinerja-link">Link Dokumen</label>
+                        <input type="url" id="kinerja-link" class="form-input" placeholder="https://docs.google.com/...">
+                    </div>
+                </div>
+            </main>
+            <footer class="modal-footer">
+                <button type="button" class="btn btn-secondary modal-cancel-btn">Batal</button>
+                <button type="submit" id="save-kinerja-btn" class="btn btn-primary">Simpan</button>
+            </footer>
+        </form>
+    </div>
+</div>
+
+<div id="budget-modal" class="modal-container">
+    <div class="modal-box">
+        <header class="modal-header">
+            <h2 id="budget-modal-title" class="text-lg font-bold">Tambah Uraian Anggaran</h2>
+            <button type="button" class="modal-close-btn modal-cancel-btn" aria-label="Tutup modal">&times;</button>
+        </header>
+        <form id="budget-form" autocomplete="off">
+            <main class="modal-body">
+                <div class="form-group">
+                    <label for="budget-uraian">Nama Uraian</label>
+                    <input type="text" id="budget-uraian" class="form-input" placeholder="Contoh: Belanja Bahan" required>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="form-group">
+                        <label for="budget-pagu">Pagu Revisi</label>
+                        <input type="number" id="budget-pagu" class="form-input" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="budget-realisasi">Realisasi</label>
+                        <input type="number" id="budget-realisasi" class="form-input" placeholder="0">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="form-group">
+                        <label for="budget-bulan">Bulan</label>
+                        <select id="budget-bulan" class="form-input" required>
+                            <option>Januari</option> <option>Februari</option> <option>Maret</option>
+                            <option>April</option> <option>Mei</option> <option>Juni</option>
+                            <option>Juli</option> <option>Agustus</option> <option>September</option>
+                            <option>Oktober</option> <option>November</option> <option>Desember</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="budget-tahun">Tahun</label>
+                        <input type="number" id="budget-tahun" class="form-input" placeholder="2024" required>
+                    </div>
+                </div>
+            </main>
+            <footer class="modal-footer">
+                <button type="button" class="btn btn-secondary modal-cancel-btn">Batal</button>
+                <button type="submit" id="save-budget-btn" class="btn btn-primary">Simpan Uraian</button>
+            </footer>
+        </form>
+    </div>
+</div>
+
+<div id="confirm-modal" class="modal-container">
+    <div class="modal-box max-w-sm">
+        <main class="modal-body text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+            </div>
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Konfirmasi Hapus</h3>
+            <div class="mt-2">
+                <p class="text-sm text-gray-500">
+                    Apakah Anda yakin ingin menghapus item ini? Tindakan ini tidak dapat dibatalkan.
+                </p>
+            </div>
+        </main>
+        <footer class="modal-footer">
+            <button type="button" class="btn btn-secondary modal-cancel-btn">Batal</button>
+            <button type="button" id="confirm-delete-btn" class="btn btn-danger">Ya, Hapus</button>
+        </footer>
+    </div>
+</div>
+
+<div id="manage-leader-modal" class="modal-container">
+    <div class="modal-box max-w-sm">
+        <header class="modal-header">
+            <h2 class="text-lg font-bold">Kelola Daftar Ketua Tim</h2>
+            <button type="button" class="modal-close-btn modal-cancel-leader-btn">&times;</button>
+        </header>
+        <main class="modal-body">
+            <div class="flex gap-2 mb-4">
+                <input type="text" id="new-leader-name" class="form-input" placeholder="Nama Baru...">
+                <button id="add-leader-btn" class="btn btn-primary whitespace-nowrap">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+            
+            <hr class="border-gray-200 mb-3">
+            
+            <p class="text-xs text-gray-500 mb-2 font-semibold uppercase">Daftar Saat Ini:</p>
+            <div id="leader-list-container" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+                <div class="text-center text-gray-400 text-sm py-2">Memuat...</div>
+            </div>
+        </main>
+        <footer class="modal-footer">
+            <button type="button" class="btn btn-secondary modal-cancel-leader-btn w-full">Tutup</button>
+        </footer>
+    </div>
+</div>
